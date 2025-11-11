@@ -1,59 +1,65 @@
+// src/components/course/task/TaskRolePanelClient.tsx
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { getCourseByIdMock } from '@/lib/services/mock/courses.mock';
-import type { Course, Task as TaskType, Material } from '@/lib/types/course.types';
-import type { TaskResource as TaskRes } from '@/lib/types/task.types';
 
+// --- 1. IMPORTACIONES ACTUALIZADAS ---
+import type { Role } from '@/lib/types/core/role.model';
+import type { TaskSubmission } from '@/lib/types/core/submission.model';
+import type { Resource } from '@/hooks/core/useTaskResources'; // Importamos el tipo Resource del hook
+
+// Hooks de nuestra nueva arquitectura
+import { useTaskDetails } from '@/hooks/core/useTaskDetails';
+import { useSaveTask } from '@/hooks/core/useSaveTask';
+import { useTaskResources } from '@/hooks/core/useTaskResources';
+
+// (Se eliminan todas las importaciones de mocks y tipos antiguos)
+
+// Componentes hijos (estos no cambian)
 import TaskHeaderCard from './TaskHeaderCard';
 import TaskDescription from './pieces/TaskDescription';
 import TaskResources from './pieces/TaskResources';
 import TaskSubmissionBox from './student/TaskSubmissionBox';
-import TaskComments from './pieces/TaskComments';
+import TaskComments from './pieces/TaskComments'; // Asumiendo que esta es la ruta correcta
 import TeacherStudentsList from './teacher/TeacherStudentsList';
 import NewTaskModal from './teacher/NewTaskModal';
 import AddResourceModal from './teacher/AddResourceModal';
 
-import { getTaskResourcesMock } from '@/lib/services/mock/taskResources.mock';
-import {
-  getTaskMeta,
-  setTaskDescription,
-  addTaskResource,
-  removeTaskResource,
-  type LocalResource,
-  type TaskMeta,
-} from '@/lib/services/mock/taskMeta.local';
-
-type Resource = {
-  id: string;
-  title: string;
-  type: 'pdf' | 'document' | 'notebook' | 'slide' | 'link' | 'video';
-  url: string;
-  size?: string;
-  updatedAt?: string;
-};
-
 export default function TaskRolePanelClient({
-  role,
+  role, // 👈 Ahora acepta 'DOCENTE', 'ESTUDIANTE', 'ADMIN'
   courseId,
   taskId,
 }: {
-  role: 'STUDENT' | 'TEACHER';
+  role: Role; // 👈 TIPO ACTUALIZADO
   courseId: string;
   taskId: string;
 }) {
-  const [course, setCourse] = useState<Course | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [taskResources, setTaskResources] = useState<Resource[]>([]);
-  const [meta, setMeta] = useState<TaskMeta>({});
+  
+  // --- 2. USAMOS LOS NUEVOS HOOKS ---
+  const { 
+    data: task, 
+    isLoading: loadingTask 
+  } = useTaskDetails(taskId);
+  
+  const { 
+    resources, 
+    loading: loadingResources, 
+    addResource, 
+    removeResource 
+  } = useTaskResources(taskId);
+  
+  const { 
+    saveTask, 
+    isLoading: isSaving 
+  } = useSaveTask();
+  
+  // Estados de UI (sin cambios)
   const [openAdd, setOpenAdd] = useState(false);
   const [openNewTask, setOpenNewTask] = useState(false);
   const [editTaskId, setEditTaskId] = useState<string | undefined>(undefined);
-
-  // 👉 NUEVO: estado del tab
   const [tab, setTab] = useState<'task' | 'comments'>('task');
-
-  // Modal para crear tarea desde evento global
+  
+  // Event listener para el modal (sin cambios)
   useEffect(() => {
     const onOpen = (e: Event) => {
       const ce = e as CustomEvent<{ taskId?: string }>;
@@ -64,130 +70,88 @@ export default function TaskRolePanelClient({
     return () => document.removeEventListener('open-create-task', onOpen as EventListener);
   }, []);
 
-  // Cargar curso
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const c = await getCourseByIdMock(courseId);
-      if (!mounted) return;
-      setCourse(c);
-      setLoading(false);
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [courseId]);
+  const loading = loadingTask || loadingResources;
 
-  // Buscar módulo y tarea
-  const findModuleByTask = (c: Course | null) =>
-    c?.units.find((u) => u.tasks.some((t) => t.id === taskId)) ?? null;
-
-  const getTaskFromModule = (u: Course['units'][number] | null): TaskType | null =>
-    u ? u.tasks.find((t) => t.id === taskId) ?? null : null;
-
-  const modulo = useMemo(() => findModuleByTask(course), [course, taskId]);
-  const task = useMemo(() => getTaskFromModule(modulo), [modulo, taskId]);
-
-  const moduleLabel = useMemo(() => {
-    if (!course || !modulo) return 'Módulo —';
-    const idx = course.units.indexOf(modulo);
-    return `Módulo ${idx + 1}`;
-  }, [course, modulo]);
-
-  // Mapear recursos
-  const mapMaterialToResource = (m: Material): Resource => ({
-    id: m.id,
-    title: m.title,
-    type: m.type as Resource['type'],
-    url: m.url,
-  });
-
-  const normalizeTaskResource = (r: TaskRes): Resource => ({
-    id: r.id,
-    title: r.title,
-    type: r.type === 'other' ? 'document' : (r.type as any),
-    url: r.url,
-  });
-
-  // Cargar recursos
-  useEffect(() => {
-    let mounted = true;
-    (async () => {
-      const perTask = await getTaskResourcesMock(taskId);
-      if (!mounted) return;
-      if (perTask.length > 0) {
-        setTaskResources(perTask.map(normalizeTaskResource));
-      } else {
-        setTaskResources((course?.materials ?? []).map(mapMaterialToResource));
-      }
-    })();
-    return () => {
-      mounted = false;
-    };
-  }, [taskId, course]);
-
-  // Meta (localStorage)
-  useEffect(() => {
-    setMeta(getTaskMeta(taskId));
-  }, [taskId]);
-
-  const mergedResources: Resource[] = useMemo(() => {
-    const extra = (meta.resources ?? []).map<Resource>((r) => ({
-      id: r.id,
-      title: r.title,
-      type: r.type,
-      url: r.url,
-      size: r.size,
-      updatedAt: r.updatedAt ?? undefined,
-    }));
-    return [...extra, ...(taskResources ?? [])];
-  }, [meta.resources, taskResources]);
-
-  // Datos efectivos
-  const effectiveTitle = (meta.title ?? task?.title) ?? '';
-  const effectiveDueAt = (meta.dueAt ?? task?.dueAt) ?? null;
-  const effectiveDescription = (meta.description ?? (task as any)?.description) ?? '';
-
-  // Handlers
-  const handleSaveDescription = (next: string) => {
-    const updated = setTaskDescription(taskId, next);
-    setMeta((m) => ({ ...m, description: updated.description }));
+  // --- 3. HANDLERS ACTUALIZADOS (usan los hooks) ---
+  
+  /** Guarda la descripción actualizada */
+  const handleSaveDescription = async (next: string) => {
+    if (!task || isSaving) return;
+    try {
+      // 'saveTask' espera el payload completo
+      await saveTask({
+        taskId: task.id,
+        data: {
+          title: task.title, 
+          dueAt: task.dueAt,
+          description: next, // Solo actualizamos la descripción
+        }
+      });
+      // La caché de 'useTaskDetails' se invalidará automáticamente
+    } catch (err) {
+      console.error("Error al guardar descripción:", err);
+      alert("Error al guardar descripción");
+    }
   };
 
-  const handleAddResource = (r: { title: string; type: LocalResource['type']; url: string; size?: string }) => {
-    const added = addTaskResource(taskId, r);
-    setMeta((m) => ({ ...m, resources: [added, ...(m.resources ?? [])] }));
+  /** Añade un nuevo recurso */
+  const handleAddResource = async (r: { title: string; type: Resource['type']; url: string; size?: string }) => {
+    try {
+      await addResource(r); // El hook simulado maneja la lógica
+    } catch (err) {
+      console.error("Error al añadir recurso:", err);
+      alert("Error al añadir recurso");
+    }
   };
 
-  const handleRemoveResource = (id: string) => {
-    const updated = removeTaskResource(taskId, id);
-    setMeta((m) => ({ ...m, resources: updated.resources }));
+  /** Elimina un recurso */
+  const handleRemoveResource = async (id: string) => {
+    try {
+      await removeResource(id); // El hook simulado maneja la lógica
+    } catch (err) {
+      console.error("Error al quitar recurso:", err);
+      alert("Error al quitar recurso");
+    }
   };
-
+  
+  /** Se llama cuando el Modal de Nueva/Editar Tarea se guarda */
+  const handleSaveTaskModal = (res: { 
+    taskId: string; 
+    title: string; 
+    dueAt: string | null; 
+    description: string; 
+  }) => {
+    // El hook 'useSaveTask' (usado por el modal) ya invalidó la caché
+    // de 'useTaskDetails', por lo que los datos de 'task' se
+    // refrescarán automáticamente. No necesitamos hacer nada más.
+    console.log("Tarea guardada desde modal:", res);
+  };
+  
+  // --- 4. RENDERIZADO ---
+  
+  // Muestra el loader si los detalles o los recursos están cargando
   if (loading) return <div className="h-48 animate-pulse bg-[var(--section)] rounded-2xl" />;
-  if (!course || !task) return <div>No se encontró la tarea.</div>;
+  
+  // Muestra error si la tarea no cargó
+  if (!task) return <div>No se encontró la tarea.</div>;
 
   // Header (vive dentro del tab "Tarea")
   const Header = (
     <TaskHeaderCard
-      role={role}
-      eyebrow={moduleLabel}
-      title={effectiveTitle}
-      dueAt={effectiveDueAt ?? undefined}
-      grade={task.grade}
+      role={role} // 👈 Pasa el rol correcto
+      eyebrow={"Módulo 1 (Simulado)"} // Usamos un fallback
+      title={task.title}
+      dueAt={task.dueAt ?? undefined}
+      grade={undefined} // (Este dato no lo tenemos en TaskDetail, viene de Submission)
     />
   );
 
-  /** ====== RENDER ======
-   *  Barra de tabs pegada al sidebar con línea continua (border-t).
-   *  Tabs con fondo gris claro, borde gris claro, texto negro.
-   */
   return (
     <div className="relative z-0">
-      {/* Línea superior que conecta con el sidebar */}
+      {/* Línea superior (sin cambios) */}
       <div className="border-t border-[var(--border)] -mt-[1px]" />
 
-      {/* Barra de tabs */}
+      {/* Barra de tabs (sin cambios) */}
       <div className="flex items-end gap-2 pt-3">
         <TabButton active={tab === 'task'} onClick={() => setTab('task')}>
           Tarea
@@ -195,66 +159,59 @@ export default function TaskRolePanelClient({
         <TabButton active={tab === 'comments'} onClick={() => setTab('comments')}>
           Comentarios
         </TabButton>
-
-        {/* línea que se extiende hasta el final para “unir” visualmente */}
         <div className="flex-1 border-b border-[var(--border)] translate-y-[1px]" />
       </div>
 
       {/* Contenido del tab */}
       {tab === 'task' ? (
-        <div className="mt-4 flex gap-6">
+        <div className="mt-4 flex flex-col lg:flex-row gap-6">
           {/* Columna central */}
-          <div className="flex-1 space-y-6 pr-4">
+          <div className="flex-1 space-y-6 lg:pr-4 min-w-0">
             {Header}
 
-            {role === 'TEACHER' && (
+            {/* --- 5. LÓGICA DE ROL CORREGIDA --- */}
+            {role === 'DOCENTE' && (
               <TeacherStudentsList taskId={taskId} courseId={courseId} />
             )}
 
             <TaskDescription
-              role={role}
-              description={effectiveDescription}
+              role={role} // 👈 Pasa el rol correcto
+              description={task.description ?? ''}
               onViewRubric={() => alert('Rúbrica próximamente')}
-              onSaveDescription={role === 'TEACHER' ? handleSaveDescription : undefined}
+              onSaveDescription={role === 'DOCENTE' ? handleSaveDescription : undefined}
             />
           </div>
 
           {/* Columna derecha */}
-          <div className="w-[280px] shrink-0 space-y-6">
-            {role === 'STUDENT' && (
-              <TaskSubmissionBox taskId={taskId} onSubmitted={() => {}} />
+          <div className="w-full lg:w-[280px] shrink-0 space-y-6">
+            {/* --- 6. LÓGICA DE ROL CORREGIDA --- */}
+            {role === 'ESTUDIANTE' && (
+              <TaskSubmissionBox 
+                taskId={taskId} 
+                onSubmitted={(sub: TaskSubmission) => {
+                  alert(`Tarea ${sub.id} entregada!`);
+                  // Aquí podrías invalidar la caché de la entrega del estudiante
+                }} 
+              />
             )}
 
             <TaskResources
-              role={role}
-              resources={mergedResources}
-              onDownloadAll={(res) => {
-                res.forEach((r, i) => {
-                  setTimeout(() => {
-                    const a = document.createElement('a');
-                    a.href = r.url;
-                    a.download = '';
-                    a.target = '_blank';
-                    a.rel = 'noopener';
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }, i * 120);
-                });
-              }}
-              onAddResource={role === 'TEACHER' ? () => setOpenAdd(true) : undefined}
-              onRemoveResource={role === 'TEACHER' ? handleRemoveResource : undefined}
+              role={role} // 👈 Pasa el rol correcto
+              resources={resources} // 👈 Usamos los recursos del hook
+              onDownloadAll={() => alert("Descarga no implementada")}
+              onAddResource={role === 'DOCENTE' ? () => setOpenAdd(true) : undefined}
+              onRemoveResource={role === 'DOCENTE' ? handleRemoveResource : undefined}
             />
           </div>
         </div>
       ) : (
-        // Tab: Comentarios (solo comentarios, a ancho de contenido)
+        // Tab: Comentarios
         <div className="mt-4">
           <TaskComments taskId={taskId} role={role} />
         </div>
       )}
 
-      {/* Modales */}
+      {/* Modales (sin cambios) */}
       <AddResourceModal
         open={openAdd}
         onClose={() => setOpenAdd(false)}
@@ -266,20 +223,13 @@ export default function TaskRolePanelClient({
         onClose={() => setOpenNewTask(false)}
         courseId={courseId}
         defaultTaskId={editTaskId}
-        onSave={(res) => {
-          setMeta((m) => ({
-            ...m,
-            title: res.title,
-            dueAt: res.dueAt ?? undefined,
-            description: res.description,
-          }));
-        }}
+        onSave={handleSaveTaskModal}
       />
     </div>
   );
 }
 
-/** Botón de tab, con estilo gris claro, borde gris, texto negro */
+/* Botón de tab (sin cambios) */
 function TabButton({
   active,
   onClick,

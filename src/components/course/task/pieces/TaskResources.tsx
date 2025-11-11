@@ -5,29 +5,29 @@ import {
   PlayCircle, Link1, Add, Trash
 } from 'iconsax-react';
 
-type Resource = {
-  id: string;
-  title: string;
-  type: 'pdf' | 'document' | 'notebook' | 'slide' | 'link' | 'video';
-  url: string;
-  size?: string;
-  updatedAt?: string;
-};
+// --- 1. IMPORTACIONES CORREGIDAS ---
+import type { Role } from '@/lib/types/core/role.model'; // 👈 El tipo 'Role' correcto
+import type { Resource } from '@/hooks/core/useTaskResources'; // 👈 El tipo 'Resource' del hook
+// (Se elimina la definición local de 'Resource')
 
 export default function TaskResources({
-  role = 'STUDENT',
+  // --- 2. CORRECCIÓN DEL VALOR POR DEFECTO ---
+  role = 'ESTUDIANTE',
   resources = [],
   onDownloadAll,
   onAddResource,
   onRemoveResource,
 }: {
-  role?: 'STUDENT' | 'TEACHER';
+  // --- 3. CORRECCIÓN DEL TIPO DE PROP ---
+  role?: Role; // 👈 Acepta 'DOCENTE', 'ESTUDIANTE', 'ADMIN'
   resources?: Resource[];
   onDownloadAll?: (items: Resource[]) => void;
   onAddResource?: () => void;
   onRemoveResource?: (id: string) => void;
 }) {
-  const isTeacher = role === 'TEACHER';
+  
+  // --- 4. CORRECCIÓN DE LA LÓGICA ---
+  const isTeacher = role === 'DOCENTE'; // 👈 Comparamos con 'DOCENTE'
   const hasItems = (resources?.length ?? 0) > 0;
 
   return (
@@ -44,6 +44,7 @@ export default function TaskResources({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* --- 5. LÓGICA DE ROL CORREGIDA --- */}
           {isTeacher && (
             <button
               onClick={onAddResource}
@@ -74,6 +75,7 @@ export default function TaskResources({
         <ul className="mt-3 space-y-2">
           {resources.map((r) => (
             <li key={r.id}>
+              {/* 6. Pasa 'isTeacher' (que ahora es correcto) al hijo */}
               <ResourceRow r={r} teacher={isTeacher} onRemove={onRemoveResource} />
             </li>
           ))}
@@ -134,7 +136,7 @@ function ResourceRow({
   );
 }
 
-/* helpers visuales */
+/* helpers visuales (sin cambios) */
 function getIcon(t: Resource['type']) {
   switch (t) {
     case 'pdf': return <DocumentText size={18} color="var(--icon)" />;

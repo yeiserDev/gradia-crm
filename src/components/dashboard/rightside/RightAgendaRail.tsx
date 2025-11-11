@@ -1,8 +1,11 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { fetchMonthEvents } from '@/lib/utils/api-agenda';
-import type { AgendaEvent } from '@/lib/utils/types-agenda';
+
+// --- 1. ¡IMPORTACIONES CORREGIDAS! ---
+import { useAgenda } from '@/hooks/core/useAgenda'; // 👈 El hook "inteligente"
+import type { AgendaEvent } from '@/lib/types/core/agenda.model'; // 👈 El tipo nuevo
+// (Se eliminan 'fetchMonthEvents' y el tipo antiguo)
 
 import BigClock from './agenda/BigClock';
 import MonthCalendar from './agenda/MonthCalendar';
@@ -12,18 +15,19 @@ export default function RightAgendaRail({ className = '' }: { className?: string
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth()); // 0-11
-  const [events, setEvents] = useState<AgendaEvent[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date(now.getFullYear(), now.getMonth(), now.getDate()));
 
-  useEffect(() => {
-    fetchMonthEvents(year, month).then(setEvents);
-  }, [year, month]);
+  // --- 2. ¡LÓGICA DE DATOS CORREGIDA! ---
+  // 'events' y 'isLoading' (opcional) ahora vienen de React Query
+  const { events, isLoading } = useAgenda(year, month);
+  
+  // (Se eliminan el 'useState' para 'events' y el 'useEffect' con 'fetchMonthEvents')
 
   const dayEvents = useMemo(() => {
     const y = selectedDate.getFullYear();
     const m = selectedDate.getMonth();
     const d = selectedDate.getDate();
-    return events
+    return events // 👈 'events' ahora viene del hook
       .filter(e => {
         const st = new Date(e.start);
         return st.getFullYear() === y && st.getMonth() === m && st.getDate() === d;
@@ -40,7 +44,6 @@ export default function RightAgendaRail({ className = '' }: { className?: string
       ].join(' ')}
     >
       <BigClock />
-
       <MonthCalendar
         year={year}
         month={month}
@@ -50,7 +53,6 @@ export default function RightAgendaRail({ className = '' }: { className?: string
         onPrev={() => setMonth(m => (m === 0 ? (setYear(y => y - 1), 11) : m - 1))}
         onNext={() => setMonth(m => (m === 11 ? (setYear(y => y + 1), 0) : m + 1))}
       />
-
       <DayTimeline events={dayEvents} />
     </aside>
   );

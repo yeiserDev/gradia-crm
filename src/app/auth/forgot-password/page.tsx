@@ -5,23 +5,26 @@ import { motion } from 'framer-motion';
 import { z } from 'zod';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForgotPassword } from '@/lib/hooks/auth/useForgotPassword';
-import type { ForgotPasswordInput } from '@/lib/types/auth/password.types';
+import { useForgotPassword } from '@/hooks/auth/useForgotPassword';
+import type { ForgotPasswordPayload } from '@/lib/types/auth/password.model';
+
 
 const schema = z.object({ email: z.string().email('Correo inválido') });
 
+// Renombramos el tipo local para que coincida
+type ForgotPasswordInput = ForgotPasswordPayload;
+
 export default function ForgotPasswordPage() {
-  // Toda la lógica y el estado ahora vienen del hook
   const { handleForgotPassword, isLoading, error, isSent } = useForgotPassword();
 
   const { register, handleSubmit, formState: { errors } } =
     useForm<ForgotPasswordInput>({ resolver: zodResolver(schema) });
 
-  // La función onSubmit solo delega la tarea al hook
   const onSubmit = (values: ForgotPasswordInput) => {
     handleForgotPassword(values);
   };
 
+  // El resto de tu JSX es perfecto y no necesita cambios...
   return (
     <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
       <div className="mb-8">
@@ -31,7 +34,6 @@ export default function ForgotPasswordPage() {
         </p>
       </div>
 
-      {/* Usamos el estado 'isSent' del hook para mostrar el formulario o el mensaje de éxito */}
       {!isSent ? (
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div>
@@ -46,7 +48,6 @@ export default function ForgotPasswordPage() {
             {errors.email && <p className="text-xs text-red-500 mt-1">{String(errors.email.message)}</p>}
           </div>
 
-          {/* Mostramos el error que viene del hook */}
           {error && <p className="text-sm text-red-500 text-center">{error}</p>}
 
           <button

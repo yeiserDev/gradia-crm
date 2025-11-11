@@ -2,8 +2,11 @@
 
 import { useMemo, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import type { Course } from '@/lib/types/course.types';
-import type { Role } from '@/lib/types';
+
+// --- 1. IMPORTACIONES CORREGIDAS ---
+import type { Course } from '@/lib/types/core/course.model'; // 👈 Tipo de Curso
+import type { Role } from '@/lib/types/core/role.model';   // 👈 Tipo de Rol (el nuevo)
+// --- FIN DE IMPORTACIONES ---
 
 import SidebarHeader from './SidebarHeader';
 import SidebarActions from './SidebarActions';
@@ -14,11 +17,10 @@ type Variant = 'rail' | 'embedded';
 
 type Props = {
   course?: Course;
-  role: Role;
+  role: Role; // 👈 Ahora usa el tipo 'Role' correcto
   exitHref?: string;
   loading?: boolean;
-  /** 
-   * 'rail'    => sidebar fijo tipo rail (sticky a la izquierda)
+  /** * 'rail'    => sidebar fijo tipo rail (sticky a la izquierda)
    * 'embedded'=> columna dentro del grid
    */
   variant?: Variant;
@@ -26,7 +28,7 @@ type Props = {
 
 export default function CourseSidebar({
   course,
-  role,
+  role, // 👈 Sigue siendo el string 'DOCENTE', 'ESTUDIANTE', etc.
   exitHref = '/dashboard/courses',
   loading,
   variant = 'rail', // 👈 valor por defecto
@@ -76,10 +78,12 @@ export default function CourseSidebar({
   return (
     <aside className={asideClass}>
       <SidebarHeader title={course.title} exitHref={exitHref} />
-      {role === 'TEACHER' && <SidebarActions />}
-
+      
+      {role === 'DOCENTE' && <SidebarActions />} 
+      
       <SidebarUnitList
-        units={course.units}
+        // Si course.units es undefined, pasa un array vacío []
+        units={course.units || []} 
         courseId={course.id}
         pathname={pathname}
         openUnitId={effectiveOpen}

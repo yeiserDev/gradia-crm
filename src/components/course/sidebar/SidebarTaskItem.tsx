@@ -1,8 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { motion } from '@/lib/utils/motion';
-import type { Task } from '@/lib/types/course.types';
+import { motion } from '@/lib/utils/motion'; 
+import type { Task } from '@/lib/types/core/course.model';
 
 // 🔧 Acepta number | string | null (para convivir con mocks actuales)
 type MaybeGradedTask = Task & { grade?: number | string | null };
@@ -40,7 +40,7 @@ export default function SidebarTaskItem({
   active,
   delay = 0,
 }: {
-  task: MaybeGradedTask;   // 👈 ahora Task también encaja porque grade es opcional
+  task: MaybeGradedTask;   // 👈 Ahora 'Task' encaja
   href: string;
   active: boolean;
   delay?: number;
@@ -60,6 +60,7 @@ export default function SidebarTaskItem({
           <div className="text-[14px] font-medium text-[color:var(--fg)] leading-snug line-clamp-2">
             {task.title}
           </div>
+          {/* Esta línea ahora funciona porque 'dueAt' existe en el tipo 'Task' */}
           <div className="mt-0.5 text-[12px] text-[color:var(--muted)]">
             Entrega: {formatISO(task.dueAt)}
           </div>

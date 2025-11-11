@@ -1,7 +1,11 @@
 'use client';
 
 import { AnimatePresence, motion } from '@/lib/utils/motion';
-import type { Unit } from '@/lib/types/course.types';
+
+// --- 1. ¡IMPORTACIÓN CORREGIDA! ---
+import type { Unit } from '@/lib/types/core/course.model';
+// import type { Unit } from '@/lib/types/course.types'; // 👈 ELIMINADO
+
 import SidebarTaskItem from './SidebarTaskItem';
 
 export default function SidebarUnitItem({
@@ -19,7 +23,12 @@ export default function SidebarUnitItem({
   open: boolean;
   onToggle: () => void;
 }) {
-  const total = unit.tasks.length;
+  
+  // --- 2. ¡LÓGICA CORREGIDA! ---
+  // Nos aseguramos de que 'tasks' sea un array.
+  // Si 'unit.tasks' es undefined, usamos un array vacío [].
+  const tasks = unit.tasks || [];
+  const total = tasks.length;
 
   return (
     <li className="rounded-xl border border-[var(--border)] bg-[var(--card)] overflow-hidden">
@@ -42,7 +51,7 @@ export default function SidebarUnitItem({
           className="ml-2 mt-[2px] inline-grid place-items-center h-6 w-6 rounded-md bg-[var(--section)] text-[11px] text-[color:var(--muted)]"
           title={`${total} tareas`}
         >
-          {total}
+          {total} {/* 👈 Ahora es seguro */}
         </span>
         <svg
           className={['ml-1 h-4 w-4 shrink-0 transition-transform', open ? 'rotate-180' : 'rotate-0'].join(' ')}
@@ -68,11 +77,13 @@ export default function SidebarUnitItem({
             transition={{ duration: 0.18 }}
             className="border-t border-[var(--border)] bg-[var(--section)]/30"
           >
-            {unit.tasks.length === 0 ? (
+            {/* 👈 Ahora es seguro */}
+            {tasks.length === 0 ? (
               <div className="px-3 py-3 text-[13px] text-[color:var(--muted)]">No hay tareas</div>
             ) : (
               <ul className="py-1">
-                {unit.tasks.map((t, i) => (
+                {/* 👈 Ahora es seguro */}
+                {tasks.map((t, i) => ( 
                   <SidebarTaskItem
                     key={t.id}
                     task={t}

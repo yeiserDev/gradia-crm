@@ -1,23 +1,29 @@
 'use client';
 
-import type { MinimalUser } from '@/lib/types';
 import { TaskSquare, Calendar } from 'iconsax-react';
+
+// --- 1. ¡IMPORTACIONES CORREGIDAS! ---
+import type { UiUser } from '@/lib/types/core/user.model'; // 👈 El nuevo tipo
+import { useCourses } from '@/hooks/core/useCourses'; // 👈 El hook de Core
 
 import CourseCard, { CourseCardSkeleton } from '@/components/dashboard/CourseCard';
 import SectionHeader from '@/components/dashboard/SectionHeader';
 import RightAgendaRail from '@/components/dashboard/rightside/RightAgendaRail';
-import { useUserCourses } from '@/lib/hooks/useUserCourses';
 
-export default function StudentGeneralTab({ user }: { user: MinimalUser }) {
+export default function StudentGeneralTab({ user }: { user: UiUser }) { // 👈 TIPO ACTUALIZADO
   const firstName = user.name.split(' ')[0];
-  const { courses, loading } = useUserCourses(user.id);
+  
+  // --- 2. ¡HOOK CORREGIDO! ---
+  // 'useCourses' ya obtiene el user ID desde 'useAuth'
+  const { courses, isLoading: loading } = useCourses(); // 👈 USA EL NUEVO HOOK
 
   return (
     <div className="grid items-start gap-6 lg:gap-8 grid-cols-1 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_320px]">
       {/* Columna izquierda */}
       <div className="min-w-0 space-y-6 lg:space-y-8">
-        {/* Bienvenida */}
+        {/* Bienvenida (sin cambios) */}
         <section className="rounded-2xl border border-[var(--border)] bg-[var(--section)] px-4 py-4 sm:px-6 sm:py-6">
+          {/* ... (Todo el JSX de bienvenida se queda igual) ... */}
           <div className="grid gap-4 sm:gap-6 md:grid-cols-12 md:items-center">
             <div className="md:col-span-7">
               <h1 className="font-medium leading-tight text-[clamp(22px,3vw,32px)]">
@@ -27,14 +33,10 @@ export default function StudentGeneralTab({ user }: { user: MinimalUser }) {
                 {new Date().toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' })}
               </div>
             </div>
-
-            {/* Métricas en md+ */}
             <div className="hidden md:col-span-5 md:grid md:grid-cols-2 md:gap-4">
               <MetricCard icon={<TaskSquare size={24} color="var(--accent-amber)"/>} value={7} label="Tareas pendientes" wide />
               <MetricCard icon={<Calendar size={24} color="var(--accent-red)"/>} value={2} label="Próximos plazos" wide />
             </div>
-
-            {/* Métricas en mobile */}
             <div className="md:hidden -mx-4 px-4">
               <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x snap-mandatory">
                 <MetricCard icon={<TaskSquare size={22} color="var(--accent-amber)"/>} value={7} label="Tareas pendientes" />
@@ -47,6 +49,8 @@ export default function StudentGeneralTab({ user }: { user: MinimalUser }) {
         {/* Cursos en proceso */}
         <div className="space-y-4 sm:space-y-6">
           <SectionHeader title="Tus cursos en proceso" href="/cursos?view=all" />
+          
+          {/* --- 3. RENDERIZADO ACTUALIZADO --- */}
           <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 xl:grid-cols-3">
             {loading && (
               <>
@@ -60,18 +64,25 @@ export default function StudentGeneralTab({ user }: { user: MinimalUser }) {
               </div>
             )}
 
-            {!loading && (courses ?? []).map((c) => (
-              <CourseCard
-                key={c.id}
-                id={c.id}
-                titulo={c.title}
-                carrera={c.career}
-                estadistica1={`${c.units?.length ?? 0} unidades`}
-                estadistica2={`${(c.units?.flatMap(u => u.tasks) ?? []).length} tareas`}
-                progress={Math.min(100, Math.round(Math.random()*70)+20)} // demo
-                docente={undefined}
-              />
-            ))}
+            {!loading && (courses ?? []).map((c) => {
+              // --- 4. LÓGICA DE CONTEO CORREGIDA ---
+              // (Igual a la que usamos en CoursesGrid)
+              const units = c.units?.length ?? 0;
+              const tasks = c.units?.reduce((acc, u) => acc + (u.tasks?.length ?? 0), 0) ?? 0;
+              
+              return (
+                <CourseCard
+                  key={c.id}
+                  id={c.id}
+                  titulo={c.title}
+                  carrera={c.career}
+                  estadistica1={`${units} unidades`}
+                  estadistica2={`${tasks} tareas`} // 👈 CORREGIDO
+                  progress={Math.min(100, Math.round(Math.random()*70)+20)} // demo
+                  docente={c.docente?.name} // 👈 CORREGIDO (usa el mock)
+                />
+              );
+            })}
           </div>
         </div>
       </div>
@@ -82,6 +93,7 @@ export default function StudentGeneralTab({ user }: { user: MinimalUser }) {
   );
 }
 
+// --- (El componente MetricCard se queda igual) ---
 function MetricCard({
   icon, value, label, wide = false,
 }: { icon: React.ReactNode; value: number | string; label: string; wide?: boolean; }) {

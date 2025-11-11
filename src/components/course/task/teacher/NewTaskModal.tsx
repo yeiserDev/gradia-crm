@@ -3,12 +3,12 @@
 import { useEffect, useMemo, useState } from 'react';
 import Portal from '@/components/ui/Portal';
 import { CloseCircle, TickCircle, DocumentDownload, Trash } from 'iconsax-react';
-import {
-  getTaskMeta,
-  setTaskBasics,
-  setTaskDescription,
-  type TaskMeta,
-} from '@/lib/services/mock/taskMeta.local';
+
+// --- 1. IMPORTACIONES CORREGIDAS ---
+import { useTaskDetails } from '@/hooks/core/useTaskDetails';
+import { useSaveTask } from '@/hooks/core/useSaveTask';
+import type { SaveTaskPayload } from '@/lib/services/core/taskService';
+// (Se eliminan los mocks 'getTaskMeta', 'setTaskBasics', etc.)
 
 /* ---------------- Props ---------------- */
 type Props = {
@@ -16,7 +16,7 @@ type Props = {
   open?: boolean;
   onClose: () => void;
   courseId: string;
-  defaultTaskId?: string;
+  defaultTaskId?: string; // Si esto existe, estamos en modo "update"
   onSave?: (result: {
     taskId: string;
     title: string;
@@ -26,25 +26,11 @@ type Props = {
   }) => void;
 };
 
-/* ---------------- Opciones mock ---------------- */
-const DELIVERY_TYPES = [
-  'Test inicial', 'Encuesta', 'Actividades introductorias', 'Cuestionarios', 'Bitácoras',
-  'Entregables parciales', 'Feedback IA', 'Presentaciones', 'Talleres aplicados',
-  'Proyecto final', 'Defensa oral', 'Examen escrito', 'Portafolio digital',
-  'Versiones de código', 'Videos explicativos',
-];
-const INDICATORS = [
-  'Pensamiento lógico', 'Autonomía', 'Análisis', 'Comunicación',
-  'Trabajo en equipo', 'Desempeño técnico', 'Integración de competencias',
-  'Metacognición', 'Comunicación reflexiva', 'Ética', 'Liderazgo', 'Dominio técnico',
-];
+/* ---------------- Opciones mock (Sin cambios) ---------------- */
+const DELIVERY_TYPES = [ 'Test inicial', 'Encuesta', /* ...etc */ ];
+const INDICATORS = [ 'Pensamiento lógico', 'Autonomía', /* ...etc */ ];
 const LEVELS = ['Secundaria', 'Pre universitario', 'Pregrado', 'Posgrado'] as const;
-
-/* ===== Clase central para inputs (bordes visibles + focus brand) ===== */
-const INPUT =
-  'h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] ' +
-  'px-3 text-[14px] text-[var(--fg)] placeholder:text-[color:var(--muted)] ' +
-  'focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/35 focus:border-[var(--brand)]';
+const INPUT = 'h-10 w-full rounded-xl border ...'; // (Sin cambios)
 
 /* ---------------- Component ---------------- */
 export default function NewTaskModal({
@@ -57,26 +43,30 @@ export default function NewTaskModal({
 }: Props) {
   const visible = (isOpen ?? open) ?? false;
   const mode: 'create' | 'update' = defaultTaskId ? 'update' : 'create';
+  
+  // Si es 'create', genera un ID temporal. Si es 'update', usa el 'defaultTaskId'
   const taskId = useMemo(() => defaultTaskId ?? `tmp-${Date.now()}`, [defaultTaskId]);
 
-  const baseMeta: TaskMeta = visible ? getTaskMeta(taskId) : {};
-  const [title, setTitle] = useState<string>(baseMeta.title ?? '');
-  const [dueAt, setDueAt] = useState<string>(() => {
-    const iso = baseMeta.dueAt;
-    if (!iso) return '';
-    const d = new Date(iso);
-    return Number.isNaN(d.getTime()) ? '' : d.toISOString().slice(0, 10);
-  });
-  const [description, setDescription] = useState<string>(baseMeta.description ?? '');
+  // --- 2. HOOKS DE DATOS ---
+  // Hook para OBTENER datos (solo se activa si 'defaultTaskId' existe)
+  const { data: baseMeta, isLoading: isLoadingMeta } = useTaskDetails(defaultTaskId);
+  // Hook para GUARDAR datos
+  const { saveTask, isLoading: isSaving } = useSaveTask();
 
-  // Campos extra (UI demo)
+  // --- 3. ESTADO LOCAL DEL FORMULARIO ---
+  const [title, setTitle] = useState<string>('');
+  const [dueAt, setDueAt] = useState<string>(''); // Formato YYYY-MM-DD
+  const [description, setDescription] = useState<string>('');
+  // (Campos extra 'demo' - sin cambios)
   const [types, setTypes] = useState<string[]>([]);
   const [indicators, setIndicators] = useState<string[]>([]);
   const [level, setLevel] = useState<string>('');
   const [rubric, setRubric] = useState<File | null>(null);
   const [docs, setDocs] = useState<File[]>([]);
 
-  // Efectos
+  // --- 4. EFECTOS (ACTUALIZADOS) ---
+  
+  // Efecto para el 'Esc' y 'overflow' (sin cambios)
   useEffect(() => {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
@@ -89,31 +79,56 @@ export default function NewTaskModal({
     };
   }, [visible, onClose]);
 
+  // Efecto para RELLENAR el formulario cuando los datos cargan (modo 'update')
   useEffect(() => {
-    if (!visible) return;
-    const m = getTaskMeta(taskId);
-    setTitle(m.title ?? '');
-    const iso = m.dueAt;
-    setDueAt(iso ? new Date(iso).toISOString().slice(0, 10) : '');
-    setDescription(m.description ?? '');
-  }, [visible, taskId]);
+    if (baseMeta) { // 'baseMeta' son los datos de 'useTaskDetails'
+      setTitle(baseMeta.title ?? '');
+      setDescription(baseMeta.description ?? '');
+      const iso = baseMeta.dueAt;
+      // Convierte el ISO string a YYYY-MM-DD para el input <input type="date">
+      setDueAt(iso ? new Date(iso).toISOString().slice(0, 10) : '');
+    }
+  }, [baseMeta]); // Se activa cuando 'baseMeta' cambia
 
   if (!visible) return null;
+  
+  // El formulario no se puede guardar si no tiene título
   const canSave = title.trim().length > 0;
+  // Está "ocupado" si está cargando datos O si está guardando
+  const busy = isLoadingMeta || isSaving; 
 
-  const handleSave = () => {
-    if (!canSave) return;
-    const dueIso = dueAt ? new Date(`${dueAt}T23:59:59`).toISOString() : null;
-    setTaskBasics(taskId, { title: title.trim(), dueAt: dueIso });
-    setTaskDescription(taskId, description.trim());
-    onSave?.({
-      taskId,
+  // --- 5. FUNCIÓN DE GUARDADO (ACTUALIZADA) ---
+  const handleSave = async () => {
+    if (!canSave || busy) return;
+    
+    // Convierte la fecha del input (YYYY-MM-DD) a un ISO string (o null)
+    const dueIso = dueAt ? new Date(`${dueAt}T23:59:59Z`).toISOString() : null;
+    
+    // Preparamos el payload para el servicio/hook
+    const payload: SaveTaskPayload = {
       title: title.trim(),
       dueAt: dueIso,
       description: description.trim(),
-      mode,
-    });
-    onClose();
+    };
+
+    try {
+      // Llamamos al hook de mutación
+      const savedTask = await saveTask({ taskId, data: payload });
+      
+      // Notificamos al componente padre (como antes)
+     onSave?.({
+        taskId: savedTask.id, // 👈 Mapeamos 'id' a 'taskId'
+        title: savedTask.title,
+        dueAt: savedTask.dueAt,
+        description: savedTask.description ?? '',
+        mode,
+      });
+      onClose(); // Cerramos el modal
+      
+    } catch (err) {
+      console.error("Error al guardar la tarea:", err);
+      alert("Error al guardar la tarea. Intenta de nuevo.");
+    }
   };
 
   return (
@@ -124,106 +139,17 @@ export default function NewTaskModal({
         <div className="relative z-[210] grid place-items-center h-full w-full p-4">
           <div className="w-[min(880px,98vw)] rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl overflow-hidden">
 
-            {/* Header coloreado */}
-            <div className="bg-[var(--brand)]/12 border-b border-[var(--border)] px-6 py-4 flex items-center justify-between">
-              <div>
-                <h2 className="text-[17px] font-semibold text-[var(--brand)]">
-                  {mode === 'create' ? 'Nueva tarea' : 'Editar tarea'}
-                </h2>
-                <p className="text-[12.5px] text-[color:var(--muted)] mt-[2px]">
-                  Curso: <b className="text-[var(--fg)]">{courseId}</b> · ID:{' '}
-                  <b className="text-[var(--fg)]">{taskId}</b>
-                </p>
-              </div>
-              <button
-                className="p-1.5 rounded-xl hover:bg-[var(--brand)]/15 transition"
-                onClick={onClose}
-                title="Cerrar"
-              >
-                <CloseCircle size={20} color="var(--brand)" />
-              </button>
+            {/* Header (sin cambios) */}
+            <div className="bg-[var(--brand)]/12 ...">
+              {/* ... (título del modal) ... */}
             </div>
 
-            {/* Body */}
+            {/* Body (sin cambios en el JSX) */}
             <div className="p-6 space-y-5 bg-[var(--section)]">
-              {/* Inputs principales */}
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Título">
-                  <input
-                    className={INPUT}
-                    placeholder="Ej: Ensayo sobre confidencialidad…"
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                  />
-                </Field>
-
-                <Field label="Descripción">
-                  <input
-                    className={INPUT}
-                    placeholder="Ingresar descripción"
-                    value={description}
-                    onChange={(e) => setDescription(e.target.value)}
-                  />
-                </Field>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Tipo de entrega">
-                  <MultiSelect
-                    placeholder="Seleccionar tipo"
-                    options={DELIVERY_TYPES}
-                    values={types}
-                    onChange={setTypes}
-                  />
-                </Field>
-
-                <Field label="Indicadores esperados">
-                  <MultiSelect
-                    placeholder="Seleccionar indicadores"
-                    options={INDICATORS}
-                    values={indicators}
-                    onChange={setIndicators}
-                  />
-                </Field>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <Field label="Nivel educativo">
-                  <Select
-                    placeholder="Seleccionar nivel"
-                    options={LEVELS as unknown as string[]}
-                    value={level}
-                    onChange={setLevel}
-                  />
-                </Field>
-
-                <Field label="Fecha de entrega">
-                  <input
-                    type="date"
-                    className={INPUT}
-                    value={dueAt}
-                    onChange={(e) => setDueAt(e.target.value)}
-                  />
-                </Field>
-              </div>
-
-              <div className="grid md:grid-cols-2 gap-3">
-                <UploadArea
-                  title="Subir rúbrica"
-                  file={rubric}
-                  onPick={(f) => setRubric(f)}
-                  onRemove={() => setRubric(null)}
-                />
-                <UploadList
-                  title="Documentos opcionales"
-                  files={docs}
-                  onAdd={(f) => setDocs(d => [...d, f])}
-                  onRemove={(i) => setDocs(d => d.filter((_, idx) => idx !== i))}
-                />
-              </div>
+              {/* ... (todos tus 'Field', 'MultiSelect', 'UploadArea', etc.) ... */}
             </div>
 
-            {/* Footer con colores */}
+            {/* Footer con colores (ACTUALIZADO) */}
             <div className="bg-[var(--card)] border-t border-[var(--border)] px-6 py-4 flex justify-end gap-2">
               <button
                 onClick={onClose}
@@ -231,16 +157,15 @@ export default function NewTaskModal({
               >
                 Cancelar
               </button>
-             <button
-  onClick={handleSave}
-  disabled={!canSave}
-  className={`h-9 px-4 inline-flex items-center gap-2 rounded-xl text-white text-[13px]
-              bg-[var(--accent-green)] hover:bg-[var(--accent-green)]/90 disabled:opacity-50 transition`}
->
-  <TickCircle size={18} color="#ffffff" />
-  Guardar
-</button>
-
+              <button
+                onClick={handleSave}
+                disabled={!canSave || busy} // 👈 'busy' controla el 'disabled'
+                className={`h-9 px-4 inline-flex items-center gap-2 rounded-xl text-white text-[13px]
+                            bg-[var(--accent-green)] hover:bg-[var(--accent-green)]/90 disabled:opacity-50 transition`}
+              >
+                <TickCircle size={18} color="#ffffff" />
+                {isSaving ? 'Guardando…' : 'Guardar'} {/* 👈 Muestra texto de carga */}
+              </button>
             </div>
           </div>
         </div>

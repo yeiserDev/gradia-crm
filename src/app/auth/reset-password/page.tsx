@@ -8,6 +8,10 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Eye, EyeSlash } from 'iconsax-react';
 
+import { useResetPassword } from '@/hooks/auth/useResetPassword';
+import type { ResetPasswordPayload } from '@/lib/types/auth/password.model';
+
+// Definimos el esquema de validación (incluyendo la confirmación local)
 const schema = z.object({
   password: z.string().min(8, 'Mínimo 8 caracteres'),
   confirmPassword: z.string().min(8, 'Mínimo 8 caracteres'),
@@ -16,29 +20,47 @@ const schema = z.object({
   path: ['confirmPassword'],
 });
 
+// Nota: El tipo 'ResetPasswordPayload' de la API solo necesita { token, newPassword }
 type FormInput = { password: string; confirmPassword: string };
 
 export default function ResetPasswordPage() {
   const router = useRouter();
   const params = useSearchParams();
-  const token = params.get('token'); // úsalo al llamar a tu API
+  const token = params.get('token'); // 👈 Obtenemos el token de la URL
+
+  // --- USAMOS EL HOOK ---
+  const { reset, isLoading, errorMsg } = useResetPassword();
 
   const [show1, setShow1] = useState(false);
   const [show2, setShow2] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // (Eliminamos el 'useState' para loading, lo maneja el hook)
 
   const { register, handleSubmit, formState: { errors } } =
     useForm<FormInput>({ resolver: zodResolver(schema) });
 
   async function onSubmit(values: FormInput) {
-    setLoading(true);
-    try {
-      // TODO: POST { token, password: values.password } a tu API
-      await new Promise(r => setTimeout(r, 800));
-      router.push('/auth/login');
-    } finally {
-      setLoading(false);
+    // 1. Verificamos que tengamos un token
+    if (!token) {
+      router.replace('/auth/forgot-password'); // Si no hay token, lo mandamos a empezar de nuevo
+      return;
     }
+    
+    // 2. Llamamos a la mutación con los datos que la API espera
+    const payload: ResetPasswordPayload = {
+      token: token,
+      newPassword: values.password // Solo enviamos el campo 'password'
+    };
+    
+    reset(payload); // Disparamos la mutación
+  }
+
+  // Si el token es nulo (alguien entró a la ruta sin el enlace), mostramos un mensaje
+  if (!token) {
+    return (
+      <div className="p-6 text-center">
+        Token no encontrado. Por favor, usa el enlace enviado a tu correo.
+      </div>
+    );
   }
 
   return (
@@ -47,6 +69,12 @@ export default function ResetPasswordPage() {
         <h1 className="text-[32px] sm:text-[36px] font-semibold leading-tight">Nueva contraseña</h1>
         <p className="mt-2 text-[13px] text-[var(--muted)]">Ingresa tu nueva contraseña para continuar.</p>
       </div>
+      
+      {errorMsg && (
+        <div className="mb-4 rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
+          {errorMsg}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div>
@@ -86,10 +114,10 @@ export default function ResetPasswordPage() {
         <motion.button
           whileTap={{ scale: 0.98 }}
           type="submit"
-          disabled={loading}
+          disabled={isLoading}
           className="w-full rounded-full py-3 text-sm font-medium bg-[var(--accent)] text-white disabled:opacity-60"
         >
-          {loading ? 'Guardando…' : 'Guardar contraseña'}
+          {isLoading ? 'Guardando…' : 'Guardar contraseña'}
         </motion.button>
       </form>
     </motion.div>

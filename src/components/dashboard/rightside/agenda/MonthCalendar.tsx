@@ -1,6 +1,8 @@
 'use client';
 
-import type { AgendaEvent } from '@/lib/utils/types-agenda';
+// --- ¡IMPORTACIÓN CORREGIDA! ---
+import type { AgendaEvent } from '@/lib/types/core/agenda.model';
+// import type { AgendaEvent } from '@/lib/utils/types-agenda'; // 👈 ELIMINADO
 
 const WEEKDAYS = ['Ln', 'Ma', 'Mi', 'Ju', 'Vi', 'Sa', 'Do'];
 function keyForDay(y: number, m: number, d: number) { return `${y}-${m + 1}-${d}`; }
@@ -10,13 +12,15 @@ export default function MonthCalendar({
 }: {
   year: number;
   month: number; // 0-11
-  events: AgendaEvent[];
+  events: AgendaEvent[]; // 👈 Ahora usa el tipo 'AgendaEvent' correcto
   selectedDate: Date;
   onSelectDate: (d: Date) => void;
   onPrev: () => void;
   onNext: () => void;
 }) {
   const dots = new Set<string>();
+  
+  // Esta lógica ya funciona, porque nuestro nuevo tipo TIENE 'e.start'
   events.forEach(e => {
     const d = new Date(e.start);
     dots.add(keyForDay(d.getFullYear(), d.getMonth(), d.getDate()));
@@ -33,6 +37,7 @@ export default function MonthCalendar({
 
   return (
     <div className="rounded-2xl border border-[var(--border)] bg-[var(--card)]">
+      {/* ... (El JSX del Header se queda igual) ... */}
       <div className="flex items-center justify-between px-4 pt-4">
         <div className="font-semibold text-[15px] sm:text-[16px]">
           {first.toLocaleString('es-ES', { month: 'long', year: 'numeric' })}
@@ -43,10 +48,12 @@ export default function MonthCalendar({
         </div>
       </div>
 
+      {/* ... (El JSX de los Weekdays se queda igual) ... */}
       <div className="grid grid-cols-7 gap-1 px-4 pt-3 pb-2 text-[11px] sm:text-[12px] text-[color:var(--muted)]">
         {WEEKDAYS.map(w => <div key={w} className="text-center">{w}</div>)}
       </div>
 
+      {/* ... (El JSX de las Celdas (días) se queda igual) ... */}
       <div className="grid grid-cols-7 gap-1 px-4 pb-4">
         {cells.map((c, i) => {
           const isSel = !!c.day

@@ -1,50 +1,38 @@
 'use client';
 
-import { useState } from 'react';
+import { useState } from 'react'; 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Eye, EyeSlash } from 'iconsax-react';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import GoogleIcon from '@/components/auth/GoogleIcon';
-import { useAuthSim } from '@/context/AuthSimProvider';
-import { findUserByEmail } from '@/lib/services/mock/userDirectory.local';
+import { useLogin } from '@/hooks/auth/useLogin';
+import { LoginCredentials } from '@/lib/types/auth/login.model';
+import { useGoogleLogin } from '@/hooks/auth/useGoogleLogin';
 
-type LoginInput = { email: string; password: string };
 const schema = z.object({
   email: z.string().email('Correo inválido'),
   password: z.string().min(8, 'Mínimo 8 caracteres'),
 });
 
 export default function LoginPage() {
-  const router = useRouter();
-  const { login } = useAuthSim();
+  
+  // Hook para el login estándar
+  const { login, isLoading, errorMsg } = useLogin();
+  
+  // Hook para el login con Google
+  const { loginWithGoogle, isLoading: isGoogleLoading } = useGoogleLogin();
+
   const [show, setShow] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const { register, handleSubmit, formState: { errors } } =
-    useForm<LoginInput>({ resolver: zodResolver(schema) });
+    useForm<LoginCredentials>({ resolver: zodResolver(schema) }); 
 
-  async function onSubmit(values: LoginInput) {
-    setLoading(true);
-    setErrorMsg(null);
-    try {
-      await new Promise(r => setTimeout(r, 500));
-
-      const u = findUserByEmail(values.email);
-      if (!u || u.password !== values.password) {
-        setErrorMsg('Credenciales inválidas. Usa alumno@gradia.edu / 12345678 o docente@gradia.edu / 12345678');
-        return;
-      }
-
-      login({ userId: u.id, role: u.role, name: u.name, email: u.email, org: u.org });
-      router.replace('/dashboard?tab=general');
-    } finally {
-      setLoading(false);
-    }
+  // Envía el formulario normal
+  function onSubmit(values: LoginCredentials) {
+    login(values);
   }
 
   return (
@@ -58,6 +46,7 @@ export default function LoginPage() {
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+        {/* ... (campos de email y password) ... */}
         <div>
           <label className="block text-xs mb-1">Correo</label>
           <input
@@ -65,7 +54,7 @@ export default function LoginPage() {
             {...register('email')}
             autoComplete="email"
             className="w-full rounded-md border px-4 py-3 text-sm bg-[var(--input)] border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-            placeholder="alumno@gradia.edu o docente@gradia.edu"
+            placeholder="tu@email.com" 
           />
           {errors.email && <p className="text-xs text-red-500 mt-1">{String(errors.email.message)}</p>}
         </div>
@@ -78,7 +67,7 @@ export default function LoginPage() {
               {...register('password')}
               autoComplete="current-password"
               className="w-full rounded-md border px-4 py-3 pr-12 text-sm bg-[var(--input)] border-[var(--border)] focus:outline-none focus:ring-2 focus:ring-[var(--ring)]"
-              placeholder="12345678"
+              placeholder="********" 
             />
             <button
               type="button"
@@ -93,7 +82,7 @@ export default function LoginPage() {
           {errors.password && <p className="text-xs text-red-500 mt-1">{String(errors.password.message)}</p>}
         </div>
 
-        {errorMsg && (
+        {errorMsg && ( // Error del login normal
           <div className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
             {errorMsg}
           </div>
@@ -109,23 +98,26 @@ export default function LoginPage() {
           </Link>
         </div>
 
+        {/* Botón de Submit */}
         <motion.button
           whileTap={{ scale: 0.98 }}
           type="submit"
-          disabled={loading}
+          disabled={isLoading || isGoogleLoading} // Deshabilitamos si Google está cargando
           className="w-full rounded-full py-3 text-sm font-medium bg-[var(--accent)] text-white disabled:opacity-60"
         >
-          {loading ? 'Ingresando…' : 'Iniciar sesión'}
+          {isLoading ? 'Ingresando…' : 'Iniciar sesión'}
         </motion.button>
-
+        
+        {/* Botón de Google (Activado) */}
         <div className="text-center text-[12px] text-[var(--muted)]">o continuar con</div>
-
         <button
           type="button"
-          onClick={() => alert('Google OAuth pendiente de integrar')}
+          onClick={() => loginWithGoogle()}
+          disabled={isGoogleLoading || isLoading}
           className="w-full flex items-center justify-center gap-2 rounded-lg border border-[var(--border)] bg-[var(--card)] py-3 text-sm hover:bg-[var(--input)] transition"
         >
-          <GoogleIcon className="w-4 h-4" /> Continuar con Google
+          <GoogleIcon className="w-4 h-4" /> 
+          {isGoogleLoading ? 'Redirigiendo...' : 'Continuar con Google'}
         </button>
       </form>
     </motion.div>

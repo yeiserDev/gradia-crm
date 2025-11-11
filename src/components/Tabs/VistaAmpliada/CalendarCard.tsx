@@ -1,15 +1,17 @@
-// src/components/Tabs/VistaAmpliada/CalendarCard.tsx
 'use client';
 import { Calendar } from 'iconsax-react';
 import Card from './Card';
 import { IconButton } from './primitives';
 import MonthCalendar from '@/components/dashboard/rightside/agenda/MonthCalendar';
-import type { AgendaEvent } from '@/lib/utils/types-agenda';
+
+// --- ¡IMPORTACIÓN CORREGIDA! ---
+import type { AgendaEvent } from '@/lib/types/core/agenda.model';
+// import type { AgendaEvent } from '@/lib/utils/types-agenda'; // 👈 ELIMINADO
 
 export default function CalendarCard({
   year, month, selectedDate, events, onPrev, onNext, onSelectDate,
 }: {
-  year: number; month: number; selectedDate: Date; events: AgendaEvent[];
+  year: number; month: number; selectedDate: Date; events: AgendaEvent[]; // 👈 Ahora usa el tipo 'AgendaEvent' correcto
   onPrev: () => void; onNext: () => void; onSelectDate: (d: Date) => void;
 }) {
   return (
@@ -25,6 +27,9 @@ export default function CalendarCard({
       padded={false}
     >
       <div className="p-3">
+        {/* ¡OJO! Es probable que 'MonthCalendar' sea tu próximo error,
+          ya que también debe ser actualizado para aceptar el nuevo tipo 'AgendaEvent'.
+        */}
         <MonthCalendar
           year={year}
           month={month}

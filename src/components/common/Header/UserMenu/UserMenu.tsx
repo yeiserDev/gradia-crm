@@ -1,26 +1,30 @@
 'use client';
 import Link from 'next/link';
 import { useCallback, useId, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Popover from '@/components/ui/Propover';
-import ThemeToggleMenuItem from '@/components/common/Header/UserMenu/ThemeToggleMenuItem';
-import type { MinimalUser } from '@/lib/types';
-import { useAuthSim } from '@/context/AuthSimProvider';
+import Popover from '@/components/ui/Propover'; // (Asumo que la ruta es correcta)
+import ThemeToggleMenuItem from './ThemeToggleMenuItem';
+import type { UiUser } from '@/lib/types/core/user.model';
+import { useLogout } from '@/hooks/auth/useLogout';
+
 import {
   TagUser, Book, Award, AlignBottom,
   MessageQuestion, Setting2, Logout, Briefcase
 } from 'iconsax-react';
 
-type Props = { user: MinimalUser };
+type Props = { user: UiUser };
 
 export default function UserMenu({ user }: Props) {
   const [open, setOpen] = useState(false);
   const btnId = useId();
-  const isTeacher = user.role === 'TEACHER';
+  
+  // Lógica de rol corregida (agrupa 'DOCENTE' y 'ADMIN')
+  const isTeacher = user.role === 'DOCENTE' || user.role === 'ADMIN';
+  
   const toggle = useCallback(() => setOpen(v => !v), []);
   const close  = useCallback(() => setOpen(false), []);
-  const router = useRouter();
-  const { logout } = useAuthSim();
+  
+  // Hook de Logout
+  const { logout, isLoading } = useLogout();
 
   return (
     <div className="relative flex items-center gap-2">
@@ -35,10 +39,14 @@ export default function UserMenu({ user }: Props) {
       </button>
 
       <Popover isOpen={open} onClose={close} align="right" className="mt-3">
-        <MenuHeader roleLabel={isTeacher ? 'Docente' : 'Estudiante'} iconName={isTeacher ? 'teacher' : 'student'} />
+        <MenuHeader 
+          roleLabel={user.role === 'ADMIN' ? 'Admin' : (isTeacher ? 'Docente' : 'Estudiante')}
+          iconName={isTeacher ? 'teacher' : 'student'} 
+        />
 
         <ul id={`${btnId}-menu`} role="menu" aria-labelledby={btnId} className="pb-2">
           <li><MenuLink href="/profile" onSelect={close} icon={<TagUser size={18} color="var(--icon)" />}>Perfil</MenuLink></li>
+          
           {isTeacher ? (
             <li><MenuLink href="/courses" onSelect={close} icon={<Book size={18} color="var(--icon)" />}>Mis cursos</MenuLink></li>
           ) : (
@@ -59,11 +67,15 @@ export default function UserMenu({ user }: Props) {
           <li>
             <button
               role="menuitem"
-              onClick={() => { close(); logout(); router.replace('/auth/login'); }}
+              onClick={() => {
+                close();
+                logout(); 
+              }}
+              disabled={isLoading}
               className="menu-row w-full text-left"
             >
               <span className="menu-icon"><Logout size={18} color="var(--accent-red)" className="text-[--accent-red]" /></span>
-              <span className="menu-text">Cerrar sesión</span>
+              <span className="menu-text">{isLoading ? 'Cerrando...' : 'Cerrar sesión'}</span>
             </button>
           </li>
         </ul>
@@ -71,6 +83,8 @@ export default function UserMenu({ user }: Props) {
     </div>
   );
 }
+
+// --- Subcomponentes (sin cambios) ---
 
 function MenuHeader({ roleLabel, iconName }:{ roleLabel: string; iconName: 'student'|'teacher' }) {
   const icon = iconName === 'student'

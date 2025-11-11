@@ -1,6 +1,9 @@
 'use client';
 
-import type { Unit } from '@/lib/types/course.types';
+// --- ¡IMPORTACIÓN CORREGIDA! ---
+import type { Unit } from '@/lib/types/core/course.model';
+// import type { Unit } from '@/lib/types/course.types'; // 👈 ELIMINADO
+
 import SidebarUnitItem from './SidebarUnitItem';
 
 export default function SidebarUnitList({
@@ -10,7 +13,7 @@ export default function SidebarUnitList({
   openUnitId,
   onToggle,
 }: {
-  units: Unit[];
+  units: Unit[]; // 👈 Este tipo 'Unit' ahora es el correcto
   courseId: string;
   pathname: string;
   openUnitId: string | null;

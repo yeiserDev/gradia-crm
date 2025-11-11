@@ -5,10 +5,12 @@ import { useState } from 'react';
 import {
   DocumentUpload, PlayCircle, Trash, DocumentText, Document, Code, Image as ImageIcon, Music, Folder,
 } from 'iconsax-react';
-import type { TaskSubmission } from '@/lib/types/task.types';
 import { motion, AnimatePresence } from '@/lib/utils/motion';
-import { useCurrentUser } from '@/lib/auth.client';
-import { submitMyTask } from '@/lib/services/mock/gateway.local';
+
+// --- 1. IMPORTACIONES CORREGIDAS ---
+import type { TaskSubmission, ApiSubmissionResponse } from '@/lib/types/core/submission.model';
+import { useSubmitTask } from '@/hooks/core/useSubmitTask';
+// 'useCurrentUser' y 'submitMyTask' se eliminan
 
 export default function TaskSubmissionBox({
   taskId,
@@ -17,10 +19,11 @@ export default function TaskSubmissionBox({
   taskId: string;
   onSubmitted: (sub: TaskSubmission) => void;
 }) {
-  const user = useCurrentUser();
+  // --- 2. HOOKS ACTUALIZADOS ---
+  const { submitTask, isLoading: busy } = useSubmitTask(); // 👈 El nuevo hook
   const [files, setFiles] = useState<File[]>([]);
   const [hover, setHover] = useState<'file' | 'video' | null>(null);
-  const [busy, setBusy] = useState(false);
+  // 'busy' y 'user' ahora vienen de los hooks
 
   function handlePickFiles(accept?: string) {
     const input = document.createElement('input');
@@ -40,6 +43,29 @@ export default function TaskSubmissionBox({
     if (dropped.length) setFiles((prev) => [...prev, ...dropped]);
   }
 
+  // --- 3. LÓGICA DE SUBMIT ACTUALIZADA ---
+  const handleOnSubmit = async () => {
+    if (!files.length || busy) return;
+
+    // Llamamos a nuestro hook de mutación
+    const sub: ApiSubmissionResponse = await submitTask({ taskId, files });
+    
+    setFiles([]); // Limpiamos los archivos
+
+    // Mapeamos la respuesta de la API al tipo que la UI espera
+    const mapped: TaskSubmission = {
+      id: sub.id,
+      studentId: sub.studentId,
+      studentName: sub.studentName,
+      submittedAt: sub.submittedAt ?? new Date().toISOString(),
+      files: (sub.attachments ?? []).map(a => ({ name: a.title, size: 0 })), // 'size' es 0 porque el mock no lo devuelve
+      grade: null,
+      feedback: null,
+      status: 'SUBMITTED',
+    };
+    onSubmitted(mapped);
+  };
+
   return (
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
       <div className="text-[13px] font-medium text-[color:var(--muted)] mb-2">Entrega</div>
@@ -49,6 +75,7 @@ export default function TaskSubmissionBox({
         onDragOver={(e) => e.preventDefault()}
         onDrop={onDrop}
       >
+        {/* ... (El JSX de la caja de Drop no cambia) ... */}
         <motion.div initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.2 }} className="space-y-3">
           <div className="flex items-center justify-center gap-3">
             <motion.button
@@ -62,7 +89,6 @@ export default function TaskSubmissionBox({
             >
               <DocumentUpload size={20} color="currentColor" />
             </motion.button>
-
             <motion.button
               whileTap={{ scale: 0.96 }}
               onMouseEnter={() => setHover('video')}
@@ -75,7 +101,6 @@ export default function TaskSubmissionBox({
               <PlayCircle size={20} color="currentColor" />
             </motion.button>
           </div>
-
           <AnimatePresence>
             {hover && (
               <motion.div
@@ -88,7 +113,6 @@ export default function TaskSubmissionBox({
               </motion.div>
             )}
           </AnimatePresence>
-
           <div className="text-[13px] text-[color:var(--muted)]">
             Arrastra y suelta aquí o usa los botones
           </div>
@@ -97,6 +121,7 @@ export default function TaskSubmissionBox({
 
       {!!files.length && (
         <ul className="mt-4 space-y-2">
+          {/* ... (El JSX de la lista de archivos no cambia) ... */}
           {files.map((f, i) => (
             <li
               key={`${f.name}-${i}`}
@@ -115,7 +140,6 @@ export default function TaskSubmissionBox({
                   </div>
                 </div>
               </div>
-
               <button
                 onClick={() => setFiles((prev) => prev.filter((_, idx) => idx !== i))}
                 className="grid place-items-center h-9 w-9 min-w-[36px] rounded-lg border border-[var(--border)] hover:bg-[var(--card)]"
@@ -130,27 +154,10 @@ export default function TaskSubmissionBox({
       )}
 
       <div className="mt-4">
+        {/* --- 4. BOTÓN ACTUALIZADO --- */}
         <button
-          disabled={!files.length || busy}
-          onClick={async () => {
-            setBusy(true);
-            const sub = await submitMyTask(taskId, { id: user.id, name: user.name }, files);
-            setFiles([]);
-            setBusy(false);
-
-            // adapta al tipo TaskSubmission de tu UI
-            const mapped: TaskSubmission = {
-              id: sub.id,
-              studentId: sub.studentId,
-              studentName: sub.studentName,
-              submittedAt: sub.submittedAt ?? new Date().toISOString(),
-              files: (sub.attachments ?? []).map(a => ({ name: a.title, size: 0 })),
-              grade: null,
-              feedback: null,
-              status: 'SUBMITTED',
-            };
-            onSubmitted(mapped);
-          }}
+          disabled={!files.length || busy} // 'busy' ahora viene del hook 'useSubmitTask'
+          onClick={handleOnSubmit} // Llamamos a nuestra nueva función
           className="w-full h-11 rounded-xl bg-[var(--brand)] text-white font-medium disabled:opacity-50 hover:opacity-95"
         >
           {busy ? 'Enviando…' : 'Enviar mi tarea'}
@@ -160,7 +167,8 @@ export default function TaskSubmissionBox({
   );
 }
 
-/* ===== helpers UI ===== */
+/* ===== helpers UI (no cambian) ===== */
+// ... (todos tus helpers getExt, prettySize, is, getIcon, getIconStyle se quedan igual)
 function getExt(f: File) {
   const m = /\.(\w+)$/.exec(f.name.toLowerCase());
   return m?.[1] ?? '';

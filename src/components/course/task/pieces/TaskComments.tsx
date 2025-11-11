@@ -1,8 +1,13 @@
 'use client';
 
 import { useMemo, useRef, useState } from 'react';
-import type { Role, TaskComment } from '@/lib/types/task.types';
-import { useTaskComments } from '@/lib/hooks/useTaskComments';
+
+// --- 1. ¡IMPORTACIONES CORREGIDAS! ---
+import type { Role } from '@/lib/types/core/role.model';
+import type { TaskComment } from '@/lib/types/core/task.model';
+import { useTaskComments } from '@/hooks/core/useTaskComments';
+// --- FIN DE IMPORTACIONES ---
+
 import { Send2, Like1, Message, ArrowDown2, ArrowUp2, More } from 'iconsax-react';
 
 /* ===== helpers ===== */
@@ -160,6 +165,8 @@ function CommentItem({
 
 /* ===== componente principal ===== */
 export default function TaskComments({ taskId, role }: { taskId: string; role: Role }) {
+  // 2. Esta lógica ahora funciona gracias a las importaciones corregidas
+  //    y al hook simulado que creamos en el paso anterior.
   const { items, loading, add } = useTaskComments(taskId, role);
   const [value, setValue] = useState('');
   const [sort, setSort] = useState<'new' | 'old'>('new');
@@ -180,6 +187,7 @@ export default function TaskComments({ taskId, role }: { taskId: string; role: R
     await add(v, null);
   };
 
+  // 3. El resto de tu JSX está perfecto y no necesita cambios
   return (
     <div className="space-y-4">
       {/* composer raíz */}

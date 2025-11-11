@@ -1,8 +1,11 @@
 import type { Metadata } from 'next';
 import { Poppins } from 'next/font/google';
-import { ThemeProvider } from '@/components/providers/ThemeProvider';
-import { AuthSimProvider } from '@/context/AuthSimProvider';
 import './globals.css';
+
+// Importaciones
+import { ThemeProvider } from '@/components/providers/ThemeProvider'; // Tu wrapper
+import { QueryProvider } from '@/components/providers/QueryProvider';
+import { AuthProvider } from '@/context/AuthProvider';
 
 export const metadata: Metadata = {
   title: 'GradIA',
@@ -19,11 +22,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${poppins.className} antialiased`}>
-        <ThemeProvider>
-          <AuthSimProvider>
-            {children}
-          </AuthSimProvider>
-        </ThemeProvider>
+        
+        <QueryProvider>
+          <ThemeProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </ThemeProvider>
+        </QueryProvider>
+        
       </body>
     </html>
   );

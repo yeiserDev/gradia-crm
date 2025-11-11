@@ -5,14 +5,19 @@ import { motion } from 'framer-motion';
 import { Information, SidebarRight } from 'iconsax-react';
 import Container from '@/components/common/Container';
 import SubHeaderTabs from '@/components/common/Header/SubHeaderTabs';
-import UserMenu from '@/components/common/Header/UserMenu/UserMenu';
-import type { MinimalUser } from '@/lib/types';
+import UserMenu from './UserMenu/UserMenu';
+
+// --- 1. ¡IMPORTACIÓN CORREGIDA! ---
+import type { UiUser } from '@/lib/types/core/user.model'; // 👈 El tipo 'UiUser'
+// import type { MinimalUser } from '@/lib/types'; // 👈 ELIMINADO
+
 import { AppsMenu } from './Menus/AppsMenu';
 import { MessagesMenu } from './Menus/MessagesMenu';
 import { NotificationsMenu } from './Menus/NotificationsMenu';
 
 type TabItem = { value: string; label: string; icon?: React.ReactNode; disabled?: boolean };
-type Props = { user: MinimalUser; tabs?: TabItem[]; onToggleSidebar?: () => void };
+// --- 2. TIPO DE PROP CORREGIDO ---
+type Props = { user: UiUser; tabs?: TabItem[]; onToggleSidebar?: () => void };
 
 export default function Header({ user, tabs = [], onToggleSidebar }: Props) {
   return (
@@ -61,7 +66,8 @@ export default function Header({ user, tabs = [], onToggleSidebar }: Props) {
               <AppsMenu />
               <NotificationsMenu />
             </div>
-            <UserMenu user={user} />
+            {/* 3. El UserMenu ahora recibe el 'UiUser' */}
+            <UserMenu user={user} /> 
           </div>
         </Container>
       </div>

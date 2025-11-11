@@ -8,11 +8,15 @@ import {
   Link1,
   TickCircle,
 } from 'iconsax-react';
+import { useEffect, useState } from 'react';
+
+// --- ¡IMPORTACIONES CORREGIDAS! ---
 import type {
   Submission,
-  Attach, // <-- usamos el tipo Attach para el 'type'
-} from '@/lib/services/mock/taskSubmissions.local';
-import { useEffect, useState } from 'react';
+  Attach, // 👈 Ahora importa 'Attach' de nuestro nuevo archivo
+} from '@/lib/types/core/submission.model';
+// --- FIN DE IMPORTACIONES ---
+
 
 export default function StudentSubmissionModal({
   taskId,
@@ -21,7 +25,7 @@ export default function StudentSubmissionModal({
   onSave,
 }: {
   taskId: string;
-  submission: Submission;
+  submission: Submission; // 👈 Ahora usa el tipo 'Submission' correcto
   onClose: () => void;
   onSave: (grade?: number, feedback?: string) => void;
 }) {
@@ -32,7 +36,7 @@ export default function StudentSubmissionModal({
     submission.feedback ?? ''
   );
 
-  // UX: bloquear scroll + Escape
+  // UX: bloquear scroll + Escape (sin cambios)
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
@@ -54,7 +58,8 @@ export default function StudentSubmissionModal({
         <div className="absolute inset-0 bg-black/50" onClick={onClose} />
         <div className="relative z-[310] grid place-items-center h-full p-4">
           <div className="w-[min(760px,96vw)] rounded-2xl border border-[var(--border)] bg-[var(--card)] overflow-hidden shadow-xl">
-            {/* Header */}
+            
+            {/* Header (sin cambios) */}
             <div className="px-5 py-4 border-b border-[var(--border)] bg-[var(--brand)]/10 flex items-center justify-between">
               <div>
                 <div className="text-[15px] font-semibold">
@@ -76,7 +81,7 @@ export default function StudentSubmissionModal({
               </button>
             </div>
 
-            {/* Body */}
+            {/* Body (sin cambios) */}
             <div className="p-5 grid md:grid-cols-2 gap-5">
               {/* Adjuntos */}
               <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
@@ -116,10 +121,9 @@ export default function StudentSubmissionModal({
                 )}
               </section>
 
-              {/* Calificación */}
+              {/* Calificación (sin cambios) */}
               <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
                 <h4 className="text-[14px] font-semibold mb-3">Calificación</h4>
-
                 <label className="text-[13px] font-medium">
                   Nota (0 – 20)
                   <input
@@ -132,7 +136,6 @@ export default function StudentSubmissionModal({
                     }
                   />
                 </label>
-
                 <label className="block text-[13px] font-medium mt-3">
                   Feedback
                   <textarea
@@ -146,7 +149,7 @@ export default function StudentSubmissionModal({
               </section>
             </div>
 
-            {/* Footer */}
+            {/* Footer (sin cambios) */}
             <div className="px-5 py-4 border-t border-[var(--border)] bg-[var(--card)] flex justify-end gap-2">
               <button
                 onClick={onClose}
@@ -172,8 +175,9 @@ export default function StudentSubmissionModal({
   );
 }
 
-/* ---------- Helpers de tipos seguros ---------- */
-/** Tipo seguro del 'type' del adjunto */
+/* ---------- Helpers (sin cambios) ---------- */
+// El tipo 'Attach' ahora se importa correctamente,
+// por lo que 'AttachType' funciona.
 type AttachType = Attach['type'];
 
 function iconFor(t: AttachType) {

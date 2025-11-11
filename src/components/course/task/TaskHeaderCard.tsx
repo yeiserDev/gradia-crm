@@ -4,6 +4,10 @@ import { useState } from 'react';
 import { Book1, Calendar, Eye } from 'iconsax-react';
 import GradeDetailModal from './notamodal/GradeDetailModal';
 
+// --- 1. IMPORTAMOS EL TIPO 'Role' CORRECTO ---
+import type { Role } from '@/lib/types/core/role.model';
+
+// (Asumimos que estos tipos son locales o mocks temporales)
 type RubricItem = { label: string; score: number; max: number; date?: string; };
 type AIFeedback = {
   videoUrl?: string; overall?: string;
@@ -18,7 +22,8 @@ const toGradeNumber = (grade: unknown): number | null => {
 };
 
 export default function TaskHeaderCard({
-  role = 'STUDENT',
+  // --- 2. CORRECCIÓN DEL VALOR POR DEFECTO ---
+  role = 'ESTUDIANTE',
   title,
   dueAt,
   grade,
@@ -27,7 +32,8 @@ export default function TaskHeaderCard({
   rubric,
   ai,
 }: {
-  role?: 'STUDENT' | 'TEACHER';
+  // --- 3. CORRECCIÓN DEL TIPO DE PROP ---
+  role?: Role; // 👈 Acepta 'DOCENTE', 'ESTUDIANTE', 'ADMIN'
   title: string;
   dueAt?: string | null;
   grade?: string | number | null;
@@ -44,8 +50,12 @@ export default function TaskHeaderCard({
 
   const gradeNum = toGradeNumber(grade);
   const displayedGrade = gradeNum == null ? '—' : String(gradeNum);
-  const isTeacher = role === 'TEACHER';
+  
+  // --- 4. CORRECCIÓN DE LA LÓGICA ---
+  // Un 'ESTUDIANTE' es el único que debe ver su nota aquí.
+  const isStudent = role === 'ESTUDIANTE';
 
+  // (Estos son los mocks que el modal necesita)
   const rubricData: RubricItem[] = rubric ?? [
     { label: 'Resistencia (test de milla)', score: 4, max: 5, date: '13/03/2024' },
     { label: 'Estructura', score: 3, max: 5, date: '13/03/2024' },
@@ -58,6 +68,7 @@ export default function TaskHeaderCard({
     <>
       <section className="relative rounded-2xl border border-[var(--border)] bg-[var(--section)] px-5 py-4 overflow-visible">
         <div className="flex items-center justify-between gap-3">
+          {/* ... (El H1 y el ícono de 'Book1' se quedan igual) ... */}
           <div className="min-w-0 flex items-center gap-3">
             <span className="inline-grid place-items-center h-8 w-8 rounded-lg bg-[var(--brand)]/10 text-[var(--brand)]">
               <Book1 size={18} color="currentColor" variant="Linear" />
@@ -66,8 +77,9 @@ export default function TaskHeaderCard({
               {title}
             </h1>
           </div>
-
+          
           <div className="flex items-center gap-3 sm:gap-4 shrink-0">
+            {/* ... (La fecha de entrega 'dueAt' se queda igual) ... */}
             <div className="hidden sm:flex items-center gap-2 text-[14px] text-[color:var(--muted)]">
               <Calendar size={18} color="currentColor" variant="Linear" />
               <span>Entrega:</span>
@@ -80,8 +92,9 @@ export default function TaskHeaderCard({
               )}
             </div>
 
-            {/* Nota + Ver detalle SOLO para student */}
-            {!isTeacher && (
+            {/* --- 5. LÓGICA DE RENDERIZADO CORREGIDA --- */}
+            {/* Nota + Ver detalle SOLO para 'ESTUDIANTE' */}
+            {isStudent && (
               <>
                 <div
                   aria-label="Nota"
@@ -102,6 +115,7 @@ export default function TaskHeaderCard({
           </div>
         </div>
 
+        {/* ... (El 'eyebrow' se queda igual) ... */}
         {eyebrow && (
           <div className="absolute -top-3 -left-2 rotate-[-8deg]">
             <div className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-[3px] text-[12px]">
@@ -112,7 +126,8 @@ export default function TaskHeaderCard({
         )}
       </section>
 
-      {!isTeacher && (
+      {/* --- 6. LÓGICA DE MODAL CORREGIDA --- */}
+      {isStudent && (
         <GradeDetailModal
           isOpen={open}
           onClose={() => setOpen(false)}

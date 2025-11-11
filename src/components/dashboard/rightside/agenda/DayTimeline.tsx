@@ -1,7 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import type { AgendaEvent } from '@/lib/utils/types-agenda';
+
+// --- 1. ¡IMPORTACIÓN CORREGIDA! ---
+import type { AgendaEvent } from '@/lib/types/core/agenda.model';
+// import type { AgendaEvent } from '@/lib/utils/types-agenda'; // 👈 ELIMINADO
 
 type Props = { events: AgendaEvent[]; showTitle?: boolean; enhanced?: boolean };
 
@@ -24,6 +27,8 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
     return a;
   }, [startHour, endHour]);
 
+  // --- 2. ESTA LÓGICA ESTÁ BIEN ---
+  // (Porque nuestro nuevo 'AgendaEvent' SÍ tiene 'start' y 'end')
   const items = useMemo(() => {
     const toIndex = (d: Date) =>
       (d.getHours() - startHour) * 2 + (d.getMinutes() >= 30 ? 1 : 0);
@@ -34,23 +39,17 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
       .map((e) => {
         const s = new Date(e.start);
         const t = new Date(e.end);
-
+        // ... (el resto de la lógica de 'items' está bien)
         const startMin = s.getHours() * 60 + s.getMinutes();
         const endMin = t.getHours() * 60 + t.getMinutes();
-
         const visStartMin = startHour * 60;
         const visEndMin = endHour * 60;
-
         if (endMin <= visStartMin || startMin >= visEndMin) return null;
-
         const rawStart = toIndex(s);
         const rawEnd = toIndex(t) + 1;
-
         const startIdx = clamp(rawStart, 0, maxIdx - 1);
         const endIdx = clamp(rawEnd, 1, maxIdx);
-
         if (startIdx >= endIdx) return null;
-
         return { e, startIdx, endIdx };
       })
       .filter(Boolean)
@@ -64,7 +63,7 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
 
   const gridRowsStyle = { gridTemplateRows: `repeat(${slots.length}, ${rowHeight}px)` };
 
-  // ---- posición de la línea "ahora" (solo si es el mismo día) ----
+  // ... (La lógica de 'nowLine' también está bien porque usa 'e.start') ...
   const now = new Date();
   const sameDay = events.some(e => {
     const d = new Date(e.start);
@@ -78,7 +77,7 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
       {showTitle && <div className="text-[14px] font-semibold mb-3">Agenda del día</div>}
 
       <div className="relative grid grid-cols-[64px_minmax(0,1fr)] sm:grid-cols-[72px_minmax(0,1fr)]" style={gridRowsStyle}>
-        {/* etiquetas */}
+        {/* ... (JSX de etiquetas y líneas se queda igual) ... */}
         {slots.map((s, i) => (
           <div
             key={`lbl-${i}`}
@@ -91,8 +90,6 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
             {s.label}
           </div>
         ))}
-
-        {/* líneas (zebra suave) */}
         {slots.map((s, i) => (
           <div
             key={`line-${i}`}
@@ -104,16 +101,15 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
             style={{ gridRow: `${i + 1} / ${i + 2}` }}
           />
         ))}
-
-        {/* línea "ahora" */}
         {showNowLine && nowIdx >= 0 && nowIdx < slots.length && (
           <div
             className="pointer-events-none absolute left-[72px] right-0 h-[2px] bg-rose-500/80"
             style={{ top: `calc(${nowIdx} * ${rowHeight}px + ${rowHeight / 2}px)` }}
           />
         )}
-
-        {/* eventos */}
+        
+        {/* --- 3. EL LLAMADO A EventTile ESTÁ BIEN --- */}
+        {/* (El error está DENTRO de EventTile) */}
         {items.map(({ e, startIdx, endIdx }) => (
           <EventTile
             key={e.id}
@@ -142,22 +138,24 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
   );
 }
 
+// --- 4. ¡AQUÍ ESTÁ LA CORRECCIÓN PRINCIPAL! ---
 function EventTile({
   event,
   style,
   enhanced,
 }: {
-  event: AgendaEvent;
+  event: AgendaEvent; // 👈 Ahora es el tipo 'AgendaEvent' NUEVO
   style: React.CSSProperties;
   enhanced?: boolean;
 }) {
   const end = new Date(event.end);
   const endHM = end.toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit', hour12: false });
 
+  // Lógica de color actualizada (basada en 'event.type' y no 'event.color')
   const color =
-    event.color === 'mint'
+    event.type === 'task'
       ? 'bg-emerald-200/60 text-emerald-900 border-emerald-300'
-      : event.color === 'lilac'
+      : event.type === 'meeting'
       ? 'bg-violet-200/60 text-violet-900 border-violet-300'
       : 'bg-[var(--section)] text-[var(--fg)] border-[var(--border)]';
 
@@ -170,23 +168,24 @@ function EventTile({
 
   const inner = (
     <div className={bodyBase}>
-      <div className="text-[12px] sm:text-[13px] font-semibold leading-tight">{event.course}</div>
+      {/* Lógica de título actualizada (usa 'event.title' y no 'event.course') */}
+      <div className="text-[12px] sm:text-[13px] font-semibold leading-tight">{event.title}</div>
       <div className="text-[10px] sm:text-[11px] font-extrabold opacity-80">{endHM}</div>
+      
+      {/* El tipo nuevo no tiene 'description', por lo que esta línea
+          evaluará a 'false' y no se renderizará (lo cual está bien). */}
       {event.description && (
         <p className="text-[12px] sm:text-[12px] opacity-90 line-clamp-2">{event.description}</p>
       )}
     </div>
   );
 
-  return event.href ? (
-    <a href={event.href} style={style} className="block focus:outline-none focus:ring-2 focus:ring-[var(--brand)] rounded-xl">
-      {inner}
-    </a>
-  ) : (
+  // El tipo nuevo no tiene 'href', así que eliminamos el '<a>' tag
+  return (
     <div style={style}>{inner}</div>
   );
 }
 
-/* utils */
+/* utils (sin cambios) */
 function pad2(n: number) { return String(n).padStart(2, '0'); }
 function clamp(n: number, min: number, max: number) { return Math.max(min, Math.min(max, n)); }
