@@ -13,5 +13,5 @@ export interface LoginCredentials {
  * (Recuerda que los tokens viajan por cookies HttpOnly, no en este JSON)
  */
 export interface LoginResponse {
-  message: string; // Ej: "Login exitoso"
+  message: string;
 }
