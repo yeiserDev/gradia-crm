@@ -1,45 +1,39 @@
-import { axiosCore } from '../config/axiosCore';
+import { axiosStudent } from '../config/axiosStudent';
 import { Course } from '../../types/core/course.model';
 
-// --- DATOS SIMULADOS (TEMPORALES) ---
-// (Reemplazaremos esto con una llamada real cuando el Core esté listo)
-const MOCK_COURSES: Course[] = [
-  {
-    id: 'crs-1',
-    title: 'Ingeniería de Software I',
-    career: 'Ing. de Software',
-    units: [
-      { id: 'u1', title: 'Introducción', tasks: [{ id: 't1', title: 'Tarea 1' }] },
-      { id: 'u2', title: 'Requisitos', tasks: [{ id: 't2', title: 'Tarea 2' }, { id: 't3', title: 'Tarea 3' }] },
-    ],
-    docente: { name: 'Dr. Alan Brito' }
-  },
-  {
-    id: 'crs-2',
-    title: 'Bases de Datos Avanzadas',
-    career: 'Ing. de Sistemas',
-    units: [
-      { id: 'u3', title: 'Modelo E-R', tasks: [{ id: 't4', title: 'Foro 1' }] },
-      { id: 'u4', title: 'Normalización', tasks: [] },
-      { id: 'u5', title: 'SQL', tasks: [{ id: 't5', title: 'Examen 1' }] },
-    ],
-    docente: { name: 'Dra. Elsa Pato' }
-  },
-];
-// --- FIN DE DATOS SIMULADOS ---
-
 /**
- * Simula la obtención de cursos para un usuario.
- * (En el futuro, esto hará una llamada real: `axiosCore.get('/courses')`)
- * * @param userId - El ID del usuario (lo usaremos en el futuro)
+ * Obtiene los cursos del estudiante autenticado desde la API real
+ * El token JWT se incluye automáticamente via interceptor de axios
  */
-export const getCourses = (userId: number): Promise<Course[]> => {
-  console.log(`Simulando fetch de cursos para el usuario: ${userId}`);
-  
-  // Simulamos un retraso de red de 1 segundo
-  return new Promise((resolve) => {
-    setTimeout(() => {
-      resolve(MOCK_COURSES);
-    }, 1000);
-  });
+export const getCourses = async (): Promise<Course[]> => {
+  try {
+    // 🔧 Llamada real al backend de Student
+    const response = await axiosStudent.get('/cursos');
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Error al obtener cursos');
+    }
+
+    // Mapear la respuesta del backend al formato del frontend
+    const cursosBackend = response.data.data || [];
+
+    return cursosBackend.map((curso: any) => ({
+      id: curso.id_curso.toString(),
+      title: curso.nombre_curso,
+      career: curso.descripcion || 'Sin descripción',
+      units: curso.unidades?.map((unidad: any) => ({
+        id: unidad.id_unidad.toString(),
+        title: unidad.titulo_unidad,
+        tasks: unidad.actividades?.map((act: any) => ({
+          id: act.id_actividad.toString(),
+          title: act.nombre_actividad,
+          dueAt: act.fecha_limite
+        })) || []
+      })) || [],
+      docente: { name: 'Docente' } // TODO: Agregar info del docente desde backend
+    }));
+  } catch (error: any) {
+    console.error('Error al obtener cursos:', error);
+    throw new Error(error.response?.data?.message || 'Error al cargar cursos');
+  }
 };

@@ -1,95 +1,67 @@
 import { Submission } from '@/lib/types/core/submission.model';
-import { axiosCore } from '../config/axiosCore';
-
-// --- BASE DE DATOS SIMULADA (Temporal) ---
-let MOCK_SUBMISSIONS_DB: Submission[] = [
-  {
-    id: 'sub-1',
-    studentId: 'user-123',
-    studentName: 'Ana García (Simulada)',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(), // hace 2 horas
-    grade: null,
-    feedback: null,
-    status: 'SUBMITTED',
-    avatarUrl: 'https://api.dicebear.com/9.x/thumbs/svg?seed=Ana&backgroundColor=b6e3f4',
-    attachments: [
-      { id: 'att-1', type: 'pdf', title: 'Ensayo_Final.pdf', url: '#' },
-    ]
-  },
-  {
-    id: 'sub-2',
-    studentId: 'user-456',
-    studentName: 'Bruno Diaz (Simulado)',
-    submittedAt: null, // No entregó
-    grade: null,
-    feedback: null,
-    status: 'NOT_SUBMITTED',
-    avatarUrl: 'https://api.dicebear.com/9.x/thumbs/svg?seed=Bruno&backgroundColor=c0aede',
-    attachments: []
-  },
-  {
-    id: 'sub-3',
-    studentId: 'user-789',
-    studentName: 'Carla Torres (Simulada)',
-    submittedAt: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(), // ayer
-    grade: 18,
-    feedback: '¡Excelente trabajo!',
-    status: 'GRADED',
-    avatarUrl: 'https://api.dicebear.com/9.x/thumbs/svg?seed=Carla&backgroundColor=d1d4f9',
-    attachments: [
-      { id: 'att-2', type: 'link', title: 'video-demo.com', url: '#' },
-    ]
-  },
-];
-// --- FIN DE MOCK DB ---
+import { axiosStudent } from '../config/axiosStudent';
 
 /**
- * (SIMULADO) Obtiene la lista de entregas para una tarea.
- * Reemplaza a listForTeacher
+ * Obtiene la lista de entregas del estudiante autenticado
+ * Conectado al backend de Student: GET /api/student/entregas
  */
-export const getSubmissionsList = async (taskId: string): Promise<Submission[]> => {
-  console.log(`Simulando fetch de entregas para tarea: ${taskId}`);
-  await new Promise(r => setTimeout(r, 600)); // Simula red
-  
-  // En una app real, harías:
-  // const { data } = await axiosCore.get(`/tasks/${taskId}/submissions`);
-  // return data;
-  
-  return MOCK_SUBMISSIONS_DB;
+export const getSubmissionsList = async (taskId?: string): Promise<Submission[]> => {
+  try {
+    // 🔧 Llamada real al backend de Student
+    const response = await axiosStudent.get('/entregas');
+
+    if (!response.data.success) {
+      throw new Error(response.data.message || 'Error al obtener entregas');
+    }
+
+    const entregasBackend = response.data.data || [];
+
+    // Mapear entregas del backend al formato del frontend
+    return entregasBackend
+      .filter((entrega: any) => !taskId || entrega.actividad.id_actividad.toString() === taskId)
+      .map((entrega: any) => ({
+        id: entrega.id_entrega.toString(),
+        studentId: entrega.id_usuario.toString(),
+        studentName: 'Estudiante', // TODO: Agregar nombre desde backend
+        submittedAt: entrega.fecha_entrega,
+        grade: null, // TODO: Conectar con evaluaciones
+        feedback: null, // TODO: Conectar con comentarios
+        status: 'SUBMITTED',
+        avatarUrl: null,
+        attachments: entrega.archivos?.map((archivo: any) => ({
+          id: archivo.id_archivo_entrega.toString(),
+          type: archivo.tipo_archivo,
+          title: archivo.nombre_archivo,
+          url: archivo.url_archivo
+        })) || []
+      }));
+  } catch (error: any) {
+    console.error('Error al obtener lista de entregas:', error);
+    return [];
+  }
 };
 
 /**
- * (SIMULADO) Guarda la nota y feedback de una entrega.
- * Reemplaza a upsertGrade
+ * Guarda la calificación y feedback de una entrega
+ * TODO: Conectar con backend de Teacher para evaluaciones
  */
 export const saveGrade = async (
-  submissionId: string, 
-  grade?: number, 
+  submissionId: string,
+  grade?: number,
   feedback?: string
 ): Promise<Submission> => {
-  console.log(`Simulando guardado de nota para: ${submissionId}`);
-  await new Promise(r => setTimeout(r, 500)); // Simula red
+  try {
+    // TODO: Implementar con backend de Teacher
+    // const response = await axiosTeacher.post(`/evaluaciones`, {
+    //   id_entrega: submissionId,
+    //   puntuacion: grade,
+    //   comentario_general: feedback
+    // });
 
-  // Actualiza la DB simulada
-  let updatedSubmission: Submission | undefined;
-  MOCK_SUBMISSIONS_DB = MOCK_SUBMISSIONS_DB.map(s => {
-    if (s.id === submissionId) {
-      updatedSubmission = { 
-        ...s, 
-        grade: grade ?? null, 
-        feedback: feedback ?? null,
-        status: (grade != null) ? 'GRADED' : 'SUBMITTED' // Si hay nota, está calificado
-      };
-      return updatedSubmission;
-    }
-    return s;
-  });
-
-  if (!updatedSubmission) throw new Error("Submission no encontrada");
-
-  // En una app real, harías:
-  // const { data } = await axiosCore.post(`/submissions/${submissionId}/grade`, { grade, feedback });
-  // return data;
-  
-  return updatedSubmission;
+    console.warn('saveGrade: No implementado aún');
+    throw new Error('Funcionalidad de calificación no disponible aún');
+  } catch (error: any) {
+    console.error('Error al guardar calificación:', error);
+    throw error;
+  }
 };

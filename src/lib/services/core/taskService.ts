@@ -1,29 +1,34 @@
 import { TaskDetail } from '@/lib/types/core/task.model';
-import { axiosCore } from '../config/axiosCore';
-
-// --- BASE DE DATOS SIMULADA (Temporal) ---
-// (Un simple objeto en memoria para simular guardados)
-const MOCK_TASK_DB: Record<string, TaskDetail> = {
-  'task-1': { 
-    id: 'task-1', 
-    title: 'Tarea 1 (Cargada de Mock)', 
-    description: 'Esta es una descripción cargada desde el mock.', 
-    dueAt: new Date().toISOString() 
-  },
-};
-// --- FIN DE MOCK DB ---
+import { axiosStudent } from '../config/axiosStudent';
 
 /**
- * (SIMULADO) Obtiene los detalles de una tarea.
- * Reemplaza a getTaskMeta
+ * Obtiene los detalles de una actividad desde el backend de Student
+ * El token JWT se incluye automáticamente via interceptor
  */
 export const getTaskDetails = async (taskId: string): Promise<TaskDetail | null> => {
-  console.log(`Simulando fetch de detalles para tarea: ${taskId}`);
-  // Simulamos un retraso de red
-  await new Promise(r => setTimeout(r, 400));
-  
-  // Devuelve la tarea de nuestra DB simulada, o null si no existe
-  return MOCK_TASK_DB[taskId] || null;
+  try {
+    // 🔧 Llamada real al backend - ajustar endpoint según disponibilidad
+    // Por ahora, necesitaremos obtener la actividad desde el curso
+    // TODO: Verificar si existe endpoint directo GET /api/student/actividades/:id
+
+    console.warn('getTaskDetails: Endpoint directo no disponible aún, retornando null');
+    return null;
+
+    // Cuando esté disponible:
+    // const response = await axiosStudent.get(`/actividades/${taskId}`);
+    // if (!response.data.success) return null;
+    //
+    // const actividad = response.data.data;
+    // return {
+    //   id: actividad.id_actividad.toString(),
+    //   title: actividad.nombre_actividad,
+    //   description: actividad.descripcion || '',
+    //   dueAt: actividad.fecha_limite
+    // };
+  } catch (error) {
+    console.error('Error al obtener detalles de tarea:', error);
+    return null;
+  }
 };
             
 /**
