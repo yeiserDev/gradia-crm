@@ -1,6 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
 import { getCourses } from '@/lib/services/core/getCourses';
-import { getTeacherCourses } from '@/lib/services/teacher/courseService';
 import { useAuth } from '@/context/AuthProvider';
 
 // Clave única para la caché de cursos
@@ -23,11 +22,11 @@ export const useCourses = () => {
     isError,
     error
   } = useQuery({
-    // La clave de caché incluye el rol para diferenciar
-    queryKey: [COURSES_QUERY_KEY, user?.id_usuario, isTeacher ? 'teacher' : 'student'],
+    // La clave de caché depende del ID y roles del usuario
+    queryKey: [COURSES_QUERY_KEY, user?.id_usuario, user?.roles],
 
-    // Usar el backend apropiado según el rol
-    queryFn: isTeacher ? getTeacherCourses : getCourses,
+    // ✅ Pasar los roles del usuario a getCourses para determinar qué backend usar
+    queryFn: () => getCourses(user?.roles),
 
     // Solo ejecutar si el usuario está cargado
     enabled: !!user,
