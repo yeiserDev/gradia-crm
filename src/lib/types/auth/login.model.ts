@@ -10,8 +10,9 @@ export interface LoginCredentials {
 /**
  * Respuesta JSON del endpoint POST /api/auth/login
  * [cite: 901]
- * (Recuerda que los tokens viajan por cookies HttpOnly, no en este JSON)
+ * ✅ Ahora incluye accessToken en el response para guardarlo en localStorage
  */
 export interface LoginResponse {
   message: string;
+  accessToken: string;
 }
