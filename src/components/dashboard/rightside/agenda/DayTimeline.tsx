@@ -53,7 +53,7 @@ export default function DayTimeline({ events, showTitle = true, enhanced = false
         return { e, startIdx, endIdx };
       })
       .filter(Boolean)
-      .sort((a: any, b: any) => a.startIdx - b.startIdx) as Array<{
+      .sort((a, b) => (a && b ? a.startIdx - b.startIdx : 0)) as Array<{
         e: AgendaEvent; startIdx: number; endIdx: number;
       }>;
   }, [events, slots.length, startHour, endHour]);

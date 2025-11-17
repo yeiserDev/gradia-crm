@@ -16,26 +16,39 @@ export const getSubmissionsList = async (taskId?: string): Promise<Submission[]>
 
     const entregasBackend = response.data.data || [];
 
+    type EntregaBackend = {
+      id_entrega: number;
+      id_usuario: number;
+      fecha_entrega: string;
+      actividad: { id_actividad: number };
+      archivos?: Array<{
+        id_archivo_entrega: number;
+        tipo_archivo: string;
+        nombre_archivo: string;
+        url_archivo: string;
+      }>;
+    };
+
     // Mapear entregas del backend al formato del frontend
     return entregasBackend
-      .filter((entrega: any) => !taskId || entrega.actividad.id_actividad.toString() === taskId)
-      .map((entrega: any) => ({
+      .filter((entrega: EntregaBackend) => !taskId || entrega.actividad.id_actividad.toString() === taskId)
+      .map((entrega: EntregaBackend) => ({
         id: entrega.id_entrega.toString(),
         studentId: entrega.id_usuario.toString(),
-        studentName: 'Estudiante', // TODO: Agregar nombre desde backend
+        studentName: 'Estudiante',
         submittedAt: entrega.fecha_entrega,
-        grade: null, // TODO: Conectar con evaluaciones
-        feedback: null, // TODO: Conectar con comentarios
-        status: 'SUBMITTED',
+        grade: null,
+        feedback: null,
+        status: 'SUBMITTED' as const,
         avatarUrl: null,
-        attachments: entrega.archivos?.map((archivo: any) => ({
+        attachments: entrega.archivos?.map((archivo) => ({
           id: archivo.id_archivo_entrega.toString(),
           type: archivo.tipo_archivo,
           title: archivo.nombre_archivo,
           url: archivo.url_archivo
         })) || []
       }));
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error al obtener lista de entregas:', error);
     return [];
   }
@@ -46,9 +59,9 @@ export const getSubmissionsList = async (taskId?: string): Promise<Submission[]>
  * TODO: Conectar con backend de Teacher para evaluaciones
  */
 export const saveGrade = async (
-  submissionId: string,
-  grade?: number,
-  feedback?: string
+  _submissionId: string,
+  _grade?: number,
+  _feedback?: string
 ): Promise<Submission> => {
   try {
     // TODO: Implementar con backend de Teacher
@@ -60,7 +73,7 @@ export const saveGrade = async (
 
     console.warn('saveGrade: No implementado aún');
     throw new Error('Funcionalidad de calificación no disponible aún');
-  } catch (error: any) {
+  } catch (error) {
     console.error('Error al guardar calificación:', error);
     throw error;
   }

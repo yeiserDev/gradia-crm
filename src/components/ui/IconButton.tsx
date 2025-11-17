@@ -14,7 +14,7 @@ export function IconButton({
 }) {
   return (
     <motion.button
-      ref={btnRef as any}
+      ref={btnRef as React.Ref<HTMLButtonElement>}
       id={id}
       type="button"
       aria-haspopup="menu"

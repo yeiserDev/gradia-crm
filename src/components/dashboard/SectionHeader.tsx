@@ -21,8 +21,8 @@ export default function SectionHeader({
   const classes = 'flex items-center justify-between mb-2' + (className ? ` ${className}` : '');
 
   const Right = href
-    ? (props: any) => <Link {...props} href={href!} />
-    : (props: any) => <button {...props} onClick={onClickRight} />;
+    ? (props: React.HTMLAttributes<HTMLAnchorElement>) => <Link {...props} href={href!} />
+    : (props: React.HTMLAttributes<HTMLButtonElement>) => <button {...props} onClick={onClickRight} />;
 
   return (
     <div className={classes}>
