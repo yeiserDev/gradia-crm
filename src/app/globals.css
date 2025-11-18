@@ -1,0 +1,112 @@
+@import "tailwindcss";
+
+/* Dark mode por clase */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ================= TOKENS ================= */
+:root {
+  /* Layout */
+  --header-h: 56px;
+  --rail-gap: 16px;
+
+  /* Base (LIGHT) */
+  --bg: #ffffff;
+  --fg: #0f172a;
+  --muted: #6b7280;
+
+  /* Superficies */
+  --card: #ffffff;        /* ⬅ opaco */
+  --section: #f7f8fb;
+  --border: #e5e7eb;
+
+  /* Marca */
+  --brand: #00B8B8;
+  --brand-rgb: 139 140 251; /* para rgb(var(--brand-rgb) / α) */
+
+  /* Iconos y links */
+  --icon: #111827;        /* ⬅ negro para header, chips, etc. */
+  --link: #2563eb;
+  --link-hover: #1d4ed8;
+
+  /* Focus ring */
+  --ring: #8b8cfb;
+
+  /* Acentos */
+  --accent-amber: #f59e0b;
+  --accent-green: #16a34a;
+  --accent-red: #ef4444;
+
+  /* Subrayado (tabs) */
+  --underline: #000000;
+
+   --input: #f7f8fb;        /* fondo de inputs (light) */
+  --accent: #00B8B8;       /* color principal de CTA (light) */
+}
+  
+.dark {
+  /* Base (DARK) */
+  --bg: #0b0f19;
+  --fg: #e5e7eb;
+  --muted: #9ca3af;
+
+  /* Superficies */
+  --card: #0f1117;        /* ⬅ opaco */
+  --section: #0b0d13;
+  --border: #20232b;
+
+  /* Marca */
+  --brand: #00B8B8;
+  --brand-rgb: 139 140 251;
+
+  /* Iconos y links */
+  --icon: #e5e7eb;        /* iconos claros */
+  --link: #60a5fa;
+  --link-hover: #3b82f6;
+
+  --ring: #8b8cfb;
+
+  /* Acentos */
+  --accent-amber: #fbbf24;
+  --accent-green: #22c55e;
+  --accent-red: #f87171;
+
+  /* Subrayado (tabs) */
+  --underline: #ffffff;
+}
+
+/* Importante: usa SIEMPRE bg/fg (no background/foreground) */
+:root { color-scheme: light; }
+.dark { color-scheme: dark; }
+
+/* ================= BASE ================= */
+html, body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+/* Opcional: helpers para menús */
+.menu-row  { @apply flex items-center gap-3 px-3.5 py-2 text-sm hover:bg-[var(--section)] text-[var(--fg)]; }
+.menu-icon { @apply inline-grid place-items-center w-5 h-5 shrink-0 text-[var(--icon)]; }
+.menu-text { @apply truncate; }
+
+/* Header en md+ */
+@media (min-width: 768px) {
+  :root { --header-h: 64px; }
+}
+
+/* Evita scroll horizontal por blurs/posicionamientos absolutos */
+html, body { overflow-x: clip; }
+@supports not (overflow-x: clip) {
+  html, body { overflow-x: hidden; }
+}
+
+/* Evita que textos/hijos flex empujen el ancho */
+* { min-width: 0; }
+
+:root {
+  --grid-dot: #e5e7eb; /* gris claro en modo light */
+}
+
+.dark {
+  --grid-dot: #303031; /* gris medio para que no sea blanco */
+}
