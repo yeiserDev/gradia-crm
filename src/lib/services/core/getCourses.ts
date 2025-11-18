@@ -12,11 +12,12 @@ export const getCourses = async (userRoles?: string[]): Promise<Course[]> => {
     // 🔧 Determinar qué backend usar según el rol del usuario
     const isTeacherOrAdmin = userRoles?.some(role => ['DOCENTE', 'ADMIN'].includes(role));
 
-    // Si es docente o admin, usar backend Teacher; si no, usar Student
-    const axios = isTeacherOrAdmin ? axiosTeacher : axiosStudent;
+    // TEMPORAL: Usar siempre el backend Teacher para ambos roles
+    // porque el backend Student podría no tener los endpoints implementados
+    const axios = axiosTeacher;
     const endpoint = '/cursos';
 
-    console.log(`🔍 Llamando al backend: ${isTeacherOrAdmin ? 'TEACHER' : 'STUDENT'} - Endpoint: ${endpoint}`);
+    console.log(`🔍 Obteniendo cursos - Usuario: ${isTeacherOrAdmin ? 'TEACHER' : 'STUDENT'} - Backend: TEACHER - Endpoint: ${endpoint}`);
 
     // Llamada al backend correspondiente
     const response = await axios.get(endpoint);

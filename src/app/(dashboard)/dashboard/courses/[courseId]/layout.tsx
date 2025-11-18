@@ -1,10 +1,10 @@
 'use client';
 
 import { use } from 'react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import CourseSidebar from '@/components/course/sidebar/CourseSidebar';
-import { makeMockCourse } from '@/lib/services/mock/courses.mock';
 import { useAuth } from '@/context/AuthProvider';
+import { useCourseDetails } from '@/hooks/core/useCourseDetails';
 
 export default function CourseLayout({
   children,
@@ -14,11 +14,11 @@ export default function CourseLayout({
   params: Promise<{ courseId: string }>;
 }) {
   const { courseId } = use(params);
-  
-  // 2. USAMOS EL NUEVO HOOK
+
+  // Obtener usuario autenticado
   const { user, isAuthenticated } = useAuth();
 
-  // 4. ADAPTAMOS EL ROL - HOOKS PRIMERO, ANTES DE CUALQUIER RETURN
+  // Determinar rol del usuario
   const userRole = useMemo(() => {
     if (!user || !user.roles) return 'ESTUDIANTE';
     if (user.roles.includes('DOCENTE')) return 'DOCENTE';
@@ -26,10 +26,21 @@ export default function CourseLayout({
     return 'ESTUDIANTE';
   }, [user]);
 
-  // 5. El mock y el sidebar ahora usan el 'userRole' adaptado
-  const course = useMemo(() => makeMockCourse(courseId, userRole), [courseId, userRole]);
+  // Cargar curso real desde la API
+  const { course, isLoading, error, refresh } = useCourseDetails(courseId, user?.roles);
 
-  // 3. GUARDA DE SEGURIDAD - DESPUÉS DE LOS HOOKS
+  // Listener para refrescar el curso cuando se crea una unidad
+  useEffect(() => {
+    const handleRefreshCourse = () => {
+      console.log('🔄 Refrescando curso...');
+      refresh();
+    };
+
+    document.addEventListener('refresh-course', handleRefreshCourse);
+    return () => document.removeEventListener('refresh-course', handleRefreshCourse);
+  }, [refresh]);
+
+  // Guarda de seguridad - después de los hooks
   if (!isAuthenticated || !user) {
     return null;
   }
@@ -38,11 +49,21 @@ export default function CourseLayout({
     <div className="grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-6 px-4 lg:px-6">
       {/* Sidebar rail (fijo) */}
       <aside className="min-w-0">
-        <CourseSidebar course={course} role={userRole} />
+        <CourseSidebar
+          course={course || undefined}
+          role={userRole}
+          loading={isLoading}
+        />
       </aside>
 
       {/* Contenido principal */}
-      <main className="min-w-0 ">
+      <main className="min-w-0">
+        {error && (
+          <div className="p-4 rounded-xl bg-red-50 border border-red-200 text-red-700">
+            <p className="font-semibold">Error al cargar el curso</p>
+            <p className="text-sm">{error}</p>
+          </div>
+        )}
         {children}
       </main>
     </div>
