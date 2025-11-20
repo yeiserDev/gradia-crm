@@ -3,34 +3,32 @@ import type { ReactNode } from 'react';
 import Image from 'next/image';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/context/AuthProvider'; // 👈 Usamos el nuevo hook
+import { useAuth } from '@/context/AuthProvider'; 
 
 import '@/app/globals.css';
 
 export default function AuthLayout({ children }: { children: ReactNode }) {
   
-  // 2. USAMOS EL NUEVO CONTEXTO
-  const { isAuthenticated } = useAuth(); // 👈 'isAuthed' ahora es 'isAuthenticated'
+  const { isAuthenticated } = useAuth(); 
   const router = useRouter();
 
-  // 3. LÓGICA DE REDIRECCIÓN (sin cambios, solo el nombre de la variable)
-  // Si el usuario ya está autenticado, lo saca de aquí
+  // LÓGICA DE REDIRECCIÓN
   useEffect(() => {
     if (isAuthenticated) {
       router.replace('/dashboard?tab=general');
     }
   }, [isAuthenticated, router]);
 
-  // 4. PROTECCIÓN DE RUTA
-  // Si está autenticado, no muestra nada mientras redirige
+  // PROTECCIÓN DE RUTA
   if (isAuthenticated) {
     return null; 
   }
 
-  // 5. Si no está autenticado, muestra la página (Login, Register, etc.)
   return (
     <div className="h-dvh w-dvw lg:overflow-hidden bg-[var(--bg)] text-[var(--fg)]">
       <div className="grid h-full w-full lg:grid-cols-2">
+        
+        {/* LADO IZQUIERDO (IMAGEN) */}
         <div className="relative hidden lg:block h-full">
           <Image
             src="/auth/hero.webp"
@@ -42,13 +40,20 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-black/20 via-transparent to-black/25" />
         </div>
-        <div className="h-full bg-white dark:bg-zinc-950"> {/* Ajuste para modo oscuro */}
+
+        {/* LADO DERECHO (FORMULARIO) */}
+        <div className="h-full bg-white dark:bg-zinc-950"> 
           <div className="h-full overflow-y-auto">
-            <div className="mx-auto w-full max-w-[440px] px-6 sm:px-8 py-10 lg:py-14">
+            {/* AQUÍ ESTABA EL PROBLEMA:
+                1. Cambié max-w-[440px] a max-w-2xl para que quepa tu formulario ancho.
+                2. Agregué 'flex flex-col justify-center min-h-full' para ayudar al centrado vertical.
+            */}
+            <div className="mx-auto w-full max-w-2xl px-6 sm:px-8 py-10 lg:py-14 min-h-full flex flex-col justify-center">
               {children}
             </div>
           </div>
         </div>
+
       </div>
     </div>
   );

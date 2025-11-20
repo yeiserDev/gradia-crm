@@ -14,8 +14,8 @@ import type { Role } from '@/lib/types/core/role.model';
 import type { UiUser } from '@/lib/types/core/user.model';
 
 export default function DashboardLayout({ children }: { children: ReactNode }) {
-  
-  const { isAuthenticated, user } = useAuth(); 
+
+  const { isAuthenticated, user } = useAuth();
   const router = useRouter();
   const pathname = usePathname();
 
@@ -58,16 +58,7 @@ export default function DashboardLayout({ children }: { children: ReactNode }) {
         bg-[var(--bg)]
       "
     >
-      {/* Fondo que me dijiste EXACTAMENTE */}
-      <div
-  className="
-    pointer-events-none
-    absolute inset-0
-    bg-[radial-gradient(var(--grid-dot)_1px,transparent_1px)]
-    [background-size:16px_16px]
-    [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)]
-  "
-/>
+      
 
 
       {/* Contenido */}

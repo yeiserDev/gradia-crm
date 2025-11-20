@@ -15,21 +15,21 @@
   --muted: #6b7280;
 
   /* Superficies */
-  --card: #ffffff;        /* ⬅ opaco */
+  --card: #ffffff;
   --section: #f7f8fb;
   --border: #e5e7eb;
 
   /* Marca */
   --brand: #00B8B8;
-  --brand-rgb: 139 140 251; /* para rgb(var(--brand-rgb) / α) */
+  --brand-rgb: 0 184 184; /* ← corregido al RGB real del #00B8B8 */
 
   /* Iconos y links */
-  --icon: #111827;        /* ⬅ negro para header, chips, etc. */
+  --icon: #111827;
   --link: #2563eb;
   --link-hover: #1d4ed8;
 
   /* Focus ring */
-  --ring: #8b8cfb;
+  --ring: #00B8B8;
 
   /* Acentos */
   --accent-amber: #f59e0b;
@@ -39,42 +39,57 @@
   /* Subrayado (tabs) */
   --underline: #000000;
 
-   --input: #f7f8fb;        /* fondo de inputs (light) */
-  --accent: #00B8B8;       /* color principal de CTA (light) */
+  /* Inputs */
+  --input: #f7f8fb;
+
+  /* NUEVO: Color secundario para gradientes */
+  --brand-gradient-from: #30E3CA;
+  --brand-gradient-to: #7DE69D;
+  --brand-gradient: linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to));
 }
-  
+
+/* ================= DARK MODE ================= */
 .dark {
-  /* Base (DARK) */
+  /* Base */
   --bg: #0b0f19;
-  --fg: #e5e7eb;
-  --muted: #9ca3af;
+  --fg: #f1f3f5;           /* texto bien blanco y legible */
+  --muted: #94a3b8;         /* placeholder perfecto */
 
   /* Superficies */
-  --card: #0f1117;        /* ⬅ opaco */
+  --card: #0f1117;
   --section: #0b0d13;
-  --border: #20232b;
+  --border: #30333d;        /* ← borde gris suave que pediste */
 
+  /* Inputs en dark */
+  --input: #16181f;         /* fondo oscuro precioso */
+  
   /* Marca */
   --brand: #00B8B8;
-  --brand-rgb: 139 140 251;
+  --brand-rgb: 0 184 184;
 
-  /* Iconos y links */
-  --icon: #e5e7eb;        /* iconos claros */
+  /* Links e iconos */
+  --icon: #e5e7eb;
   --link: #60a5fa;
-  --link-hover: #3b82f6;
+  --link-hover: #0ea5e9;
 
-  --ring: #8b8cfb;
+  /* Focus */
+  --ring: #00B8B8;
 
   /* Acentos */
   --accent-amber: #fbbf24;
   --accent-green: #22c55e;
   --accent-red: #f87171;
 
-  /* Subrayado (tabs) */
+  /* Subrayado */
   --underline: #ffffff;
+
+  /* ... tus variables dark ... */
+  --brand-gradient-from: #30E3CA;
+  --brand-gradient-to: #7DE69D;
+  --brand-gradient: linear-gradient(135deg, var(--brand-gradient-from), var(--brand-gradient-to));
 }
 
-/* Importante: usa SIEMPRE bg/fg (no background/foreground) */
+/* Color scheme para navegadores */
 :root { color-scheme: light; }
 .dark { color-scheme: dark; }
 
@@ -84,29 +99,23 @@ html, body {
   color: var(--fg);
 }
 
-/* Opcional: helpers para menús */
+/* Helpers */
 .menu-row  { @apply flex items-center gap-3 px-3.5 py-2 text-sm hover:bg-[var(--section)] text-[var(--fg)]; }
 .menu-icon { @apply inline-grid place-items-center w-5 h-5 shrink-0 text-[var(--icon)]; }
 .menu-text { @apply truncate; }
 
-/* Header en md+ */
+/* Header */
 @media (min-width: 768px) {
   :root { --header-h: 64px; }
 }
 
-/* Evita scroll horizontal por blurs/posicionamientos absolutos */
+/* Evita scroll horizontal */
 html, body { overflow-x: clip; }
 @supports not (overflow-x: clip) {
   html, body { overflow-x: hidden; }
 }
-
-/* Evita que textos/hijos flex empujen el ancho */
 * { min-width: 0; }
 
-:root {
-  --grid-dot: #e5e7eb; /* gris claro en modo light */
-}
-
-.dark {
-  --grid-dot: #303031; /* gris medio para que no sea blanco */
-}
+/* PUNTITOS DE FONDO */
+:root { --grid-dot: #e5e7eb; }
+.dark { --grid-dot: #303031; }
