@@ -1,7 +1,7 @@
 'use client';
 
-import { useMemo, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useMemo, useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 
 // --- 1. IMPORTACIONES CORREGIDAS ---
 import type { Course } from '@/lib/types/core/course.model'; // 👈 Tipo de Curso
@@ -12,6 +12,7 @@ import SidebarHeader from './SidebarHeader';
 import SidebarActions from './SidebarActions';
 import SidebarUnitList from './SidebarUnitList';
 import SidebarSkeleton from './SidebarSkeleton';
+import { NewUnitModal } from './NewUnitModal';
 
 type Variant = 'rail' | 'embedded';
 
@@ -34,13 +35,30 @@ export default function CourseSidebar({
   variant = 'rail', // 👈 valor por defecto
 }: Props) {
   const pathname = usePathname();
+  const router = useRouter();
   const [openUnitId, setOpenUnitId] = useState<string | null>(null);
+  const [showNewUnitModal, setShowNewUnitModal] = useState(false);
 
   const firstUnitId = course?.units?.[0]?.id ?? null;
   const effectiveOpen = useMemo(
     () => openUnitId ?? firstUnitId,
     [openUnitId, firstUnitId]
   );
+
+  // Listener para abrir modal de crear unidad
+  useEffect(() => {
+    const onOpenCreateUnit = () => {
+      setShowNewUnitModal(true);
+    };
+    document.addEventListener('open-create-unit', onOpenCreateUnit);
+    return () => document.removeEventListener('open-create-unit', onOpenCreateUnit);
+  }, []);
+
+  // Handler cuando se crea una nueva unidad
+  const handleUnitCreated = () => {
+    // Disparar evento para refrescar el curso en el layout
+    document.dispatchEvent(new CustomEvent('refresh-course'));
+  };
 
   // estilos base comunes
   const common = 'overflow-y-auto py-4'; // sin fondo gris
@@ -76,19 +94,31 @@ export default function CourseSidebar({
   }
 
   return (
-    <aside className={asideClass}>
-      <SidebarHeader title={course.title} exitHref={exitHref} />
-      
-      {role === 'DOCENTE' && <SidebarActions />} 
-      
-      <SidebarUnitList
-        // Si course.units es undefined, pasa un array vacío []
-        units={course.units || []} 
-        courseId={course.id}
-        pathname={pathname}
-        openUnitId={effectiveOpen}
-        onToggle={(id) => setOpenUnitId((prev) => (prev === id ? null : id))}
-      />
-    </aside>
+    <>
+      <aside className={asideClass}>
+        <SidebarHeader title={course.title} exitHref={exitHref} />
+
+        {role === 'DOCENTE' && <SidebarActions />}
+
+        <SidebarUnitList
+          // Si course.units es undefined, pasa un array vacío []
+          units={course.units || []}
+          courseId={course.id}
+          pathname={pathname}
+          openUnitId={effectiveOpen}
+          onToggle={(id) => setOpenUnitId((prev) => (prev === id ? null : id))}
+        />
+      </aside>
+
+      {/* Modal para crear nueva unidad (solo para docentes) */}
+      {role === 'DOCENTE' && course && (
+        <NewUnitModal
+          isOpen={showNewUnitModal}
+          onClose={() => setShowNewUnitModal(false)}
+          courseId={course.id}
+          onUnitCreated={handleUnitCreated}
+        />
+      )}
+    </>
   );
 }

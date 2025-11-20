@@ -1,14 +1,26 @@
 import { axiosStudent } from '../config/axiosStudent';
+import { axiosTeacher } from '../config/axiosTeacher';
 import { Course } from '../../types/core/course.model';
 
 /**
- * Obtiene los cursos del estudiante autenticado desde la API real
+ * Obtiene los cursos del usuario autenticado desde la API correspondiente según su rol
  * El token JWT se incluye automáticamente via interceptor de axios
+ * @param userRoles - Roles del usuario autenticado para determinar qué backend usar
  */
-export const getCourses = async (): Promise<Course[]> => {
+export const getCourses = async (userRoles?: string[]): Promise<Course[]> => {
   try {
-    // 🔧 Llamada real al backend de Student
-    const response = await axiosStudent.get('/cursos');
+    // 🔧 Determinar qué backend usar según el rol del usuario
+    const isTeacherOrAdmin = userRoles?.some(role => ['DOCENTE', 'ADMIN'].includes(role));
+
+    // TEMPORAL: Usar siempre el backend Teacher para ambos roles
+    // porque el backend Student podría no tener los endpoints implementados
+    const axios = axiosTeacher;
+    const endpoint = '/cursos';
+
+    console.log(`🔍 Obteniendo cursos - Usuario: ${isTeacherOrAdmin ? 'TEACHER' : 'STUDENT'} - Backend: TEACHER - Endpoint: ${endpoint}`);
+
+    // Llamada al backend correspondiente
+    const response = await axios.get(endpoint);
 
     if (!response.data.success) {
       throw new Error(response.data.message || 'Error al obtener cursos');

@@ -12,6 +12,9 @@ export interface Unit {
   id: string;
   title: string;
   tasks?: Task[];
+  descripcion?: string;
+  numero_unidad?: number;
+  id_curso?: number;
 }
 
 // Tipo principal para un Curso (ahora incluye lo que el Card necesita)
