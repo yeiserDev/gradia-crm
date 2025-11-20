@@ -1,6 +1,6 @@
 'use client';
 
-import { Edit2, Calendar, CallCalling, Sms, User, Add, Logout } from 'iconsax-react';
+import { Edit2, Calendar, CallCalling, Sms, User, Add, Logout, Key } from 'iconsax-react';
 import { useState } from 'react';
 import { useLogout } from '@/hooks/auth/useLogout';
 import EditProfileModal from './EditProfileModal';
@@ -19,13 +19,15 @@ type ProfileFormProps = {
 
 export default function ProfileForm({ user }: ProfileFormProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isPasswordOpen, setIsPasswordOpen] = useState(false);
   const { logout, isLoading } = useLogout();
 
   const roleLabel = user.role === 'TEACHER' ? 'Docente' : 'Estudiante';
 
   return (
     <div className="space-y-6">
-      {/* HERO - igual que antes pero con botón de cerrar sesión */}
+
+      {/* HERO */}
       <section
         className="rounded-3xl p-6 sm:p-8"
         style={{
@@ -43,7 +45,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
             </p>
           </div>
 
-          <div className="flex gap-3">
+          <div className="flex flex-wrap gap-3">
             <button
               onClick={() => setIsEditOpen(true)}
               className="inline-flex items-center gap-2 rounded-xl px-4 h-10 text-[13px] font-semibold text-white shadow-sm transition hover:shadow"
@@ -51,6 +53,15 @@ export default function ProfileForm({ user }: ProfileFormProps) {
             >
               <Edit2 size={16} color="#fff" />
               Editar perfil
+            </button>
+
+            <button
+              onClick={() => setIsPasswordOpen(true)}
+              className="inline-flex items-center gap-2 rounded-xl px-4 h-10 text-[13px] font-semibold text-white shadow-sm transition hover:shadow"
+              style={{ backgroundColor: 'var(--accent-blue)' }}
+            >
+              <Key size={16} color="#fff" />
+              Cambiar contraseña
             </button>
 
             <button
@@ -65,17 +76,18 @@ export default function ProfileForm({ user }: ProfileFormProps) {
         </div>
       </section>
 
-      {/* CARD PRINCIPAL - exactamente igual que antes */}
+      {/* CONTENEDOR EN DOS COLUMNAS */}
       <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6">
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_420px]">
+        <div className="grid gap-6 lg:grid-cols-2">
+
           {/* IZQUIERDA */}
-          <div>
+          <div className="space-y-5">
             <div className="flex items-center gap-4">
-              <div className="grid h-14 w-14 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--section)] text-[14px] font-semibold text-[var(--fg)]">
+              <div className="grid h-16 w-16 place-items-center rounded-2xl border border-[var(--border)] bg-[var(--section)] text-[16px] font-semibold text-[var(--fg)]">
                 {getInitials(user.name)}
               </div>
               <div>
-                <div className="text-[17px] font-semibold text-[var(--fg)]">
+                <div className="text-[18px] font-semibold text-[var(--fg)]">
                   {user.name}
                 </div>
                 <div className="text-[13px] text-[color:var(--muted)]">
@@ -85,7 +97,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
             </div>
 
             {/* ACERCA DE */}
-            <div className="mt-5 rounded-2xl border border-[var(--border)] bg-[var(--section)] p-4">
+            <div className="rounded-2xl border border-[var(--border)] bg-[var(--section)] p-4">
               <div className="flex items-center gap-2 text-[13px] font-medium text-[color:var(--muted)] mb-1.5">
                 <User size={16} color="var(--icon)" />
                 Acerca de
@@ -97,7 +109,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
           </div>
 
           {/* DERECHA */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-4">
             <InfoTile
               icon={<User size={15} color="var(--icon)" />}
               label="Rol"
@@ -122,7 +134,7 @@ export default function ProfileForm({ user }: ProfileFormProps) {
         </div>
       </section>
 
-      {/* ASIGNACIONES - igual que tenías */}
+      {/* FILA ABAJO — ASIGNACIONES */}
       <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)]">
         <div className="p-4 border-b border-[var(--border)] text-[13px] font-semibold text-[color:var(--muted)]">
           Mis asignaciones
@@ -150,13 +162,18 @@ export default function ProfileForm({ user }: ProfileFormProps) {
         </div>
       </section>
 
-      {/* MODAL */}
+      {/* MODALES */}
       <EditProfileModal isOpen={isEditOpen} onClose={() => setIsEditOpen(false)} user={user} />
+
+      {isPasswordOpen && (
+        <PasswordModal onClose={() => setIsPasswordOpen(false)} />
+      )}
     </div>
   );
 }
 
-// Componentes originales (sin tocar)
+/* ---------------- COMPONENTES ---------------- */
+
 function InfoTile({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-xl border border-[var(--border)] bg-[var(--section)] p-4">
@@ -174,4 +191,49 @@ function getInitials(name: string) {
   const first = parts[0]?.[0] ?? '';
   const last = parts.length > 1 ? parts[parts.length - 1][0] : '';
   return (first + last).toUpperCase();
+}
+
+/* MODAL SIMPLE PARA CAMBIAR CONTRASEÑA */
+function PasswordModal({ onClose }: { onClose: () => void }) {
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+      <div className="rounded-3xl w-full max-w-sm bg-[var(--card)] border border-[var(--border)] p-6 space-y-4">
+        <h2 className="text-[18px] font-semibold text-[var(--fg)]">Cambiar contraseña</h2>
+
+        <input
+          type="password"
+          placeholder="Contraseña actual"
+          className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none"
+        />
+
+        <input
+          type="password"
+          placeholder="Nueva contraseña"
+          className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none"
+        />
+
+        <input
+          type="password"
+          placeholder="Confirmar nueva contraseña"
+          className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none"
+        />
+
+        <div className="flex justify-end gap-3 pt-2">
+          <button
+            onClick={onClose}
+            className="text-[13px] px-4 py-2 rounded-xl border border-[var(--border)]"
+          >
+            Cancelar
+          </button>
+
+          <button
+            className="text-[13px] px-4 py-2 rounded-xl text-white"
+            style={{ backgroundColor: 'var(--accent-blue)' }}
+          >
+            Guardar
+          </button>
+        </div>
+      </div>
+    </div>
+  );
 }
