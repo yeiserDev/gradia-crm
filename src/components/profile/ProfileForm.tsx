@@ -5,6 +5,12 @@ import { useState } from 'react';
 import { useLogout } from '@/hooks/auth/useLogout';
 import EditProfileModal from './EditProfileModal';
 
+// --- NUEVOS IMPORTS ---
+import { useForm } from 'react-hook-form';
+import { z } from 'zod';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useChangePassword } from '@/hooks/auth/useChangePassword';
+
 type ProfileFormProps = {
   user: {
     name: string;
@@ -20,13 +26,12 @@ type ProfileFormProps = {
 export default function ProfileForm({ user }: ProfileFormProps) {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPasswordOpen, setIsPasswordOpen] = useState(false);
-  const { logout, isLoading } = useLogout();
+  const { logout, isLoading: isLogoutLoading } = useLogout();
 
   const roleLabel = user.role === 'TEACHER' ? 'Docente' : 'Estudiante';
 
   return (
     <div className="space-y-6">
-
       {/* HERO */}
       <section
         className="rounded-3xl p-6 sm:p-8"
@@ -66,11 +71,11 @@ export default function ProfileForm({ user }: ProfileFormProps) {
 
             <button
               onClick={() => logout()}
-              disabled={isLoading}
+              disabled={isLogoutLoading}
               className="inline-flex items-center gap-2 rounded-xl px-4 h-10 text-[13px] font-medium border border-[var(--border)] hover:bg-red-500/5 transition"
             >
               <Logout size={16} color="var(--accent-red)" />
-              {isLoading ? 'Saliendo...' : 'Salir'}
+              {isLogoutLoading ? 'Saliendo...' : 'Salir'}
             </button>
           </div>
         </div>
@@ -79,7 +84,6 @@ export default function ProfileForm({ user }: ProfileFormProps) {
       {/* CONTENEDOR EN DOS COLUMNAS */}
       <section className="rounded-3xl border border-[var(--border)] bg-[var(--card)] p-6">
         <div className="grid gap-6 lg:grid-cols-2">
-
           {/* IZQUIERDA */}
           <div className="space-y-5">
             <div className="flex items-center gap-4">
@@ -110,26 +114,10 @@ export default function ProfileForm({ user }: ProfileFormProps) {
 
           {/* DERECHA */}
           <div className="grid grid-cols-2 gap-4">
-            <InfoTile
-              icon={<User size={15} color="var(--icon)" />}
-              label="Rol"
-              value={roleLabel}
-            />
-            <InfoTile
-              icon={<Calendar size={15} color="var(--icon)" />}
-              label="Miembro desde"
-              value={user.memberSince ?? '01 Ene 2024'}
-            />
-            <InfoTile
-              icon={<Sms size={15} color="var(--icon)" />}
-              label="Correo"
-              value={user.email ?? 'alumno@gradia.edu'}
-            />
-            <InfoTile
-              icon={<CallCalling size={15} color="var(--icon)" />}
-              label="Teléfono"
-              value={user.phone ?? '+51 9xx xxx xxx'}
-            />
+            <InfoTile icon={<User size={15} color="var(--icon)" />} label="Rol" value={roleLabel} />
+            <InfoTile icon={<Calendar size={15} color="var(--icon)" />} label="Miembro desde" value={user.memberSince ?? '01 Ene 2024'} />
+            <InfoTile icon={<Sms size={15} color="var(--icon)" />} label="Correo" value={user.email ?? 'alumno@gradia.edu'} />
+            <InfoTile icon={<CallCalling size={15} color="var(--icon)" />} label="Teléfono" value={user.phone ?? '+51 9xx xxx xxx'} />
           </div>
         </div>
       </section>
@@ -147,17 +135,6 @@ export default function ProfileForm({ user }: ProfileFormProps) {
             <div className="text-[13px] font-medium text-[var(--fg)]">
               0 en curso • 0 completados
             </div>
-          </div>
-
-          <div className="flex justify-end">
-            <button
-              type="button"
-              className="inline-flex items-center gap-2 rounded-xl px-4 h-9 text-[13px] font-medium text-white transition"
-              style={{ backgroundColor: 'var(--accent-amber)' }}
-            >
-              <Add size={16} color="#fff" />
-              Asignar nuevo
-            </button>
           </div>
         </div>
       </section>
@@ -193,46 +170,114 @@ function getInitials(name: string) {
   return (first + last).toUpperCase();
 }
 
-/* MODAL SIMPLE PARA CAMBIAR CONTRASEÑA */
+/* ---------------- MODAL CAMBIAR CONTRASEÑA (REFACTORIZADO) ---------------- */
+
+// Esquema de validación
+const passwordSchema = z.object({
+  oldPassword: z.string().min(1, 'La contraseña actual es requerida'),
+  newPassword: z.string().min(8, 'La nueva contraseña debe tener al menos 8 caracteres'),
+  confirmPassword: z.string().min(1, 'Confirma tu nueva contraseña'),
+}).refine((data) => data.newPassword === data.confirmPassword, {
+  message: "Las contraseñas no coinciden",
+  path: ["confirmPassword"],
+});
+
+type PasswordFormValues = z.infer<typeof passwordSchema>;
+
 function PasswordModal({ onClose }: { onClose: () => void }) {
+  // Usamos nuestro nuevo hook
+  const { performChange, isLoading, errorMsg, isSuccess, reset } = useChangePassword();
+
+  const { register, handleSubmit, formState: { errors }, reset: resetForm } = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+  });
+
+  const onSubmit = (values: PasswordFormValues) => {
+    performChange({
+      oldPassword: values.oldPassword,
+      newPassword: values.newPassword,
+    });
+  };
+
+  // Si fue exitoso, mostramos un mensaje y botón de cerrar
+  if (isSuccess) {
+    return (
+      <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
+        <div className="rounded-3xl w-full max-w-sm bg-[var(--card)] border border-[var(--border)] p-6 text-center">
+          <h2 className="text-[18px] font-semibold text-green-600 mb-2">¡Contraseña Actualizada!</h2>
+          <p className="text-[13px] text-[var(--muted)] mb-4">Tu contraseña ha sido cambiada correctamente.</p>
+          <button
+            onClick={() => { reset(); onClose(); }}
+            className="text-[13px] px-5 py-2.5 rounded-xl bg-[var(--brand)] text-white"
+          >
+            Cerrar
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
       <div className="rounded-3xl w-full max-w-sm bg-[var(--card)] border border-[var(--border)] p-6 space-y-4">
         <h2 className="text-[18px] font-semibold text-[var(--fg)]">Cambiar contraseña</h2>
 
-        <input
-          type="password"
-          placeholder="Contraseña actual"
-          className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none"
-        />
+        {errorMsg && (
+          <div className="p-3 rounded-xl bg-red-50 border border-red-100 text-red-600 text-[12px]">
+            {errorMsg}
+          </div>
+        )}
 
-        <input
-          type="password"
-          placeholder="Nueva contraseña"
-          className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none"
-        />
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-3">
+          <div>
+            <input
+              type="password"
+              {...register('oldPassword')}
+              placeholder="Contraseña actual"
+              className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none focus:border-[var(--brand)]"
+            />
+            {errors.oldPassword && <p className="text-red-500 text-[11px] mt-1 ml-1">{errors.oldPassword.message}</p>}
+          </div>
 
-        <input
-          type="password"
-          placeholder="Confirmar nueva contraseña"
-          className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none"
-        />
+          <div>
+            <input
+              type="password"
+              {...register('newPassword')}
+              placeholder="Nueva contraseña"
+              className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none focus:border-[var(--brand)]"
+            />
+            {errors.newPassword && <p className="text-red-500 text-[11px] mt-1 ml-1">{errors.newPassword.message}</p>}
+          </div>
 
-        <div className="flex justify-end gap-3 pt-2">
-          <button
-            onClick={onClose}
-            className="text-[13px] px-4 py-2 rounded-xl border border-[var(--border)]"
-          >
-            Cancelar
-          </button>
+          <div>
+            <input
+              type="password"
+              {...register('confirmPassword')}
+              placeholder="Confirmar nueva contraseña"
+              className="w-full h-11 px-3 rounded-xl bg-[var(--section)] border border-[var(--border)] text-[14px] outline-none focus:border-[var(--brand)]"
+            />
+            {errors.confirmPassword && <p className="text-red-500 text-[11px] mt-1 ml-1">{errors.confirmPassword.message}</p>}
+          </div>
 
-          <button
-            className="text-[13px] px-4 py-2 rounded-xl text-white"
-            style={{ backgroundColor: 'var(--accent-blue)' }}
-          >
-            Guardar
-          </button>
-        </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={() => { reset(); onClose(); }}
+              className="text-[13px] px-4 py-2 rounded-xl border border-[var(--border)] hover:bg-[var(--section)] transition"
+            >
+              Cancelar
+            </button>
+
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="text-[13px] px-4 py-2 rounded-xl text-white font-medium transition disabled:opacity-50"
+              style={{ backgroundColor: 'var(--accent-blue)' }}
+            >
+              {isLoading ? 'Guardando...' : 'Guardar'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
