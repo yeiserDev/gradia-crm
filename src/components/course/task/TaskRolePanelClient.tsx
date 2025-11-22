@@ -218,13 +218,7 @@ export default function TaskRolePanelClient({
         onSubmit={handleAddResource}
       />
 
-      <NewTaskModal
-        open={openNewTask}
-        onClose={() => setOpenNewTask(false)}
-        courseId={courseId}
-        defaultTaskId={editTaskId}
-        onSave={handleSaveTaskModal}
-      />
+     
     </div>
   );
 }

@@ -3,41 +3,45 @@
 import { useMemo, useState, useEffect } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 
-// --- 1. IMPORTACIONES CORREGIDAS ---
-import type { Course } from '@/lib/types/core/course.model'; // 👈 Tipo de Curso
-import type { Role } from '@/lib/types/core/role.model';   // 👈 Tipo de Rol (el nuevo)
-// --- FIN DE IMPORTACIONES ---
+// --- Tipos ---
+import type { Course } from '@/lib/types/core/course.model';
+import type { Role } from '@/lib/types/core/role.model';
 
+// --- Componentes ---
 import SidebarHeader from './SidebarHeader';
 import SidebarActions from './SidebarActions';
 import SidebarUnitList from './SidebarUnitList';
 import SidebarSkeleton from './SidebarSkeleton';
 import { NewUnitModal } from './NewUnitModal';
+import NewTaskModal from '@/components/course/task/teacher/NewTaskModal';
 
 type Variant = 'rail' | 'embedded';
 
 type Props = {
   course?: Course;
-  role: Role; // 👈 Ahora usa el tipo 'Role' correcto
+  role: Role;
   exitHref?: string;
   loading?: boolean;
-  /** * 'rail'    => sidebar fijo tipo rail (sticky a la izquierda)
-   * 'embedded'=> columna dentro del grid
-   */
   variant?: Variant;
 };
 
 export default function CourseSidebar({
   course,
-  role, // 👈 Sigue siendo el string 'DOCENTE', 'ESTUDIANTE', etc.
+  role,
   exitHref = '/dashboard/courses',
   loading,
-  variant = 'rail', // 👈 valor por defecto
+  variant = 'rail',
 }: Props) {
   const pathname = usePathname();
   const router = useRouter();
+
+  // --- Unidad ---
   const [openUnitId, setOpenUnitId] = useState<string | null>(null);
   const [showNewUnitModal, setShowNewUnitModal] = useState(false);
+
+  // --- Tarea ---
+  const [showNewTaskModal, setShowNewTaskModal] = useState(false);
+  const [editTaskId, setEditTaskId] = useState<string | undefined>();
 
   const firstUnitId = course?.units?.[0]?.id ?? null;
   const effectiveOpen = useMemo(
@@ -45,36 +49,49 @@ export default function CourseSidebar({
     [openUnitId, firstUnitId]
   );
 
-  // Listener para abrir modal de crear unidad
+
+
+  
+  // --- LISTENER: Crear Unidad ---
   useEffect(() => {
     const onOpenCreateUnit = () => {
       setShowNewUnitModal(true);
     };
     document.addEventListener('open-create-unit', onOpenCreateUnit);
-    return () => document.removeEventListener('open-create-unit', onOpenCreateUnit);
+    return () =>
+      document.removeEventListener('open-create-unit', onOpenCreateUnit);
   }, []);
 
-  // Handler cuando se crea una nueva unidad
+  // --- LISTENER: Crear / Editar Tarea ---
+  useEffect(() => {
+    const onOpenCreateTask = (e: Event) => {
+      const ce = e as CustomEvent<{ taskId?: string }>;
+      setEditTaskId(ce.detail?.taskId);
+      setShowNewTaskModal(true);
+    };
+    document.addEventListener('open-create-task', onOpenCreateTask);
+    return () =>
+      document.removeEventListener('open-create-task', onOpenCreateTask);
+  }, []);
+
+  // --- Emitir refresh de curso ---
   const handleUnitCreated = () => {
-    // Disparar evento para refrescar el curso en el layout
     document.dispatchEvent(new CustomEvent('refresh-course'));
   };
 
-  // estilos base comunes
-  const common = 'overflow-y-auto py-4'; // sin fondo gris
+  // --- Estilos ---
+  const common = 'overflow-y-auto py-4';
 
-  // rail: sticky tomando alto de viewport menos header
   const rail =
     'lg:sticky lg:top-[calc(var(--header-h)-1px)] ' +
     'lg:h-[calc(100vh-var(--header-h)+1px)] ' +
     'lg:pr-4 lg:mr-2 lg:border-r border-[var(--border)]';
 
-  // embedded: solo separador inferior en móvil
   const embedded = 'border-b border-[var(--border)] lg:border-b-0';
 
-  const asideClass =
-    common + ' ' + (variant === 'rail' ? rail : embedded);
+  const asideClass = common + ' ' + (variant === 'rail' ? rail : embedded);
 
+  // --- Loading ---
   if (loading) {
     return (
       <aside className={asideClass}>
@@ -83,6 +100,7 @@ export default function CourseSidebar({
     );
   }
 
+  // --- Sin curso ---
   if (!course) {
     return (
       <aside className={asideClass}>
@@ -93,6 +111,28 @@ export default function CourseSidebar({
     );
   }
 
+
+const handleSaveTaskModal = (data: {
+  taskId: string;
+  title: string;
+  dueAt: string | null;
+  description: string;
+  mode: 'create' | 'update';
+  unitId: string;
+}) => {
+  console.log('Tarea guardada desde modal:', data);
+
+  // cerrar modal
+  setShowNewTaskModal(false);
+
+  // refrescar sidebar + curso
+  document.dispatchEvent(new CustomEvent('refresh-course'));
+};
+
+
+
+
+  // --- Render principal ---
   return (
     <>
       <aside className={asideClass}>
@@ -101,16 +141,19 @@ export default function CourseSidebar({
         {role === 'DOCENTE' && <SidebarActions />}
 
         <SidebarUnitList
-          // Si course.units es undefined, pasa un array vacío []
           units={course.units || []}
           courseId={course.id}
           pathname={pathname}
           openUnitId={effectiveOpen}
-          onToggle={(id) => setOpenUnitId((prev) => (prev === id ? null : id))}
+          onToggle={(id) =>
+            setOpenUnitId((prev) => (prev === id ? null : id))
+          }
         />
       </aside>
 
-      {/* Modal para crear nueva unidad (solo para docentes) */}
+      {/* ───────────────────────────────────── */}
+      {/*   MODAL: Nueva Unidad (Docente)       */}
+      {/* ───────────────────────────────────── */}
       {role === 'DOCENTE' && course && (
         <NewUnitModal
           isOpen={showNewUnitModal}
@@ -119,6 +162,21 @@ export default function CourseSidebar({
           onUnitCreated={handleUnitCreated}
         />
       )}
+
+      {/* ───────────────────────────────────── */}
+      {/*   MODAL: Nueva / Editar Tarea        */}
+      {/* ───────────────────────────────────── */}
+     {role === 'DOCENTE' && course && (
+  <NewTaskModal
+    open={showNewTaskModal}
+    onClose={() => setShowNewTaskModal(false)}
+    courseId={course.id}
+    units={course.units ?? []}
+
+    onSave={handleSaveTaskModal}
+  />
+)}
+
     </>
   );
 }

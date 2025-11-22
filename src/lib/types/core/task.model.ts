@@ -34,4 +34,5 @@ export interface TaskDetail {
   title: string;
   description: string | null;
   dueAt: string | null; // ISO string
+  unitId?: string; // 👈 AÑADIR ESTO
 }

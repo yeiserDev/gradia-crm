@@ -41,14 +41,6 @@ export type SaveTaskPayload = Omit<TaskDetail, 'id'>;
  * TODO: Conectar con backend real
  */
 export const saveTask = async (taskId: string, data: SaveTaskPayload): Promise<TaskDetail> => {
-  console.log(`Simulando guardado de tarea: ${taskId}`);
-  await new Promise(r => setTimeout(r, 800)); // Simula guardado
-
   const task: TaskDetail = { id: taskId, ...data };
-
-  // TODO: En una app real, harías:
-  // const { data: savedTask } = await axiosTeacher.post(`/actividades/${taskId}`, data);
-  // return savedTask;
-
-  return task; // Devuelve la tarea guardada
+  return task;
 };

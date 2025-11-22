@@ -4,180 +4,288 @@ import { useEffect, useMemo, useState } from 'react';
 import Portal from '@/components/ui/Portal';
 import { CloseCircle, TickCircle, DocumentDownload, Trash } from 'iconsax-react';
 
-// --- 1. IMPORTACIONES CORREGIDAS ---
 import { useTaskDetails } from '@/hooks/core/useTaskDetails';
 import { useSaveTask } from '@/hooks/core/useSaveTask';
 import type { SaveTaskPayload } from '@/lib/services/core/taskService';
-// (Se eliminan los mocks 'getTaskMeta', 'setTaskBasics', etc.)
 
-/* ---------------- Props ---------------- */
+type UnitItem = {
+  id: string;
+  title: string;
+};
+
 type Props = {
   isOpen?: boolean;
   open?: boolean;
   onClose: () => void;
   courseId: string;
-  defaultTaskId?: string; // Si esto existe, estamos en modo "update"
+  defaultTaskId?: string;
+  units: UnitItem[]; // 👈 NUEVO
   onSave?: (result: {
     taskId: string;
     title: string;
     dueAt: string | null;
     description: string;
     mode: 'create' | 'update';
+    unitId: string;
   }) => void;
 };
 
-/* ---------------- Opciones mock (Sin cambios) ---------------- */
-const DELIVERY_TYPES = [ 'Test inicial', 'Encuesta', /* ...etc */ ];
-const INDICATORS = [ 'Pensamiento lógico', 'Autonomía', /* ...etc */ ];
+const DELIVERY_TYPES = ['Test inicial', 'Encuesta', 'Entrega de trabajo', 'Examen parcial'];
+const INDICATORS = ['Pensamiento lógico', 'Autonomía', 'Trabajo en equipo', 'Creatividad'];
 const LEVELS = ['Secundaria', 'Pre universitario', 'Pregrado', 'Posgrado'] as const;
-const INPUT = 'h-10 w-full rounded-xl border ...'; // (Sin cambios)
 
-/* ---------------- Component ---------------- */
+const INPUT =
+  'h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 text-[14px] text-[var(--fg)] focus:outline-none focus:ring-2 focus:ring-[var(--brand)]/40';
+
 export default function NewTaskModal({
   isOpen,
   open,
   onClose,
   courseId,
   defaultTaskId,
+  units,
   onSave,
 }: Props) {
   const visible = (isOpen ?? open) ?? false;
   const mode: 'create' | 'update' = defaultTaskId ? 'update' : 'create';
-  
-  // Si es 'create', genera un ID temporal. Si es 'update', usa el 'defaultTaskId'
+
   const taskId = useMemo(() => defaultTaskId ?? `tmp-${Date.now()}`, [defaultTaskId]);
 
-  // --- 2. HOOKS DE DATOS ---
-  // Hook para OBTENER datos (solo se activa si 'defaultTaskId' existe)
   const { data: baseMeta, isLoading: isLoadingMeta } = useTaskDetails(defaultTaskId);
-  // Hook para GUARDAR datos
   const { saveTask, isLoading: isSaving } = useSaveTask();
 
-  // --- 3. ESTADO LOCAL DEL FORMULARIO ---
-  const [title, setTitle] = useState<string>('');
-  const [dueAt, setDueAt] = useState<string>(''); // Formato YYYY-MM-DD
-  const [description, setDescription] = useState<string>('');
-  // (Campos extra 'demo' - sin cambios)
+  const [title, setTitle] = useState('');
+  const [dueAt, setDueAt] = useState('');
+  const [description, setDescription] = useState('');
+
+  // Selección de módulo
+  const [selectedUnitId, setSelectedUnitId] = useState<string>('');
+
   const [types, setTypes] = useState<string[]>([]);
   const [indicators, setIndicators] = useState<string[]>([]);
   const [level, setLevel] = useState<string>('');
   const [rubric, setRubric] = useState<File | null>(null);
   const [docs, setDocs] = useState<File[]>([]);
 
-  // --- 4. EFECTOS (ACTUALIZADOS) ---
-  
-  // Efecto para el 'Esc' y 'overflow' (sin cambios)
+  // ------- ESC + scroll block -------
   useEffect(() => {
     if (!visible) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     document.addEventListener('keydown', onKey);
+
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
+
     return () => {
       document.removeEventListener('keydown', onKey);
       document.body.style.overflow = prev;
     };
   }, [visible, onClose]);
 
-  // Efecto para RELLENAR el formulario cuando los datos cargan (modo 'update')
+  // ------- Rellenar en modo edit -------
   useEffect(() => {
-    if (baseMeta) { // 'baseMeta' son los datos de 'useTaskDetails'
+    if (baseMeta) {
       setTitle(baseMeta.title ?? '');
       setDescription(baseMeta.description ?? '');
       const iso = baseMeta.dueAt;
-      // Convierte el ISO string a YYYY-MM-DD para el input <input type="date">
       setDueAt(iso ? new Date(iso).toISOString().slice(0, 10) : '');
+      if (baseMeta.unitId) setSelectedUnitId(baseMeta.unitId);
     }
-  }, [baseMeta]); // Se activa cuando 'baseMeta' cambia
+  }, [baseMeta]);
 
   if (!visible) return null;
-  
-  // El formulario no se puede guardar si no tiene título
-  const canSave = title.trim().length > 0;
-  // Está "ocupado" si está cargando datos O si está guardando
-  const busy = isLoadingMeta || isSaving; 
 
-  // --- 5. FUNCIÓN DE GUARDADO (ACTUALIZADA) ---
+  const canSave = title.trim().length > 0 && selectedUnitId.length > 0;
+  const busy = isLoadingMeta || isSaving;
+
   const handleSave = async () => {
     if (!canSave || busy) return;
-    
-    // Convierte la fecha del input (YYYY-MM-DD) a un ISO string (o null)
+
     const dueIso = dueAt ? new Date(`${dueAt}T23:59:59Z`).toISOString() : null;
-    
-    // Preparamos el payload para el servicio/hook
+
     const payload: SaveTaskPayload = {
       title: title.trim(),
       dueAt: dueIso,
       description: description.trim(),
+      unitId: selectedUnitId, // 👈 NUEVO
     };
 
     try {
-      // Llamamos al hook de mutación
       const savedTask = await saveTask({ taskId, data: payload });
-      
-      // Notificamos al componente padre (como antes)
-     onSave?.({
-        taskId: savedTask.id, // 👈 Mapeamos 'id' a 'taskId'
+
+      onSave?.({
+        taskId: savedTask.id,
         title: savedTask.title,
         dueAt: savedTask.dueAt,
         description: savedTask.description ?? '',
         mode,
+        unitId: selectedUnitId,
       });
-      onClose(); // Cerramos el modal
-      
+
+      onClose();
     } catch (err) {
-      console.error("Error al guardar la tarea:", err);
-      alert("Error al guardar la tarea. Intenta de nuevo.");
+      console.error(err);
+      alert('Error al guardar la tarea.');
     }
   };
 
   return (
     <Portal>
       <div className="fixed inset-0 z-[200]">
-        <div className="absolute inset-0 bg-black/50 backdrop-blur-[2px]" onClick={onClose} />
+        <div
+          className="absolute inset-0 bg-black/50 backdrop-blur-[2px]"
+          onClick={onClose}
+        />
 
-        <div className="relative z-[210] grid place-items-center h-full w-full p-4">
-          <div className="w-[min(880px,98vw)] rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl overflow-hidden">
+        {/* 🟩 EL NUEVO CONTENEDOR: scroll perfecto */}
+        <div className="relative z-[210] flex items-start justify-center h-full w-full overflow-y-auto p-4">
 
-            {/* Header (sin cambios) */}
-            <div className="bg-[var(--brand)]/12 ...">
-              {/* ... (título del modal) ... */}
+          <div className="w-[min(880px,98vw)] rounded-2xl border border-[var(--border)] bg-[var(--card)] shadow-2xl overflow-hidden mb-10">
+
+            {/* Header */}
+            <div className="bg-[var(--brand)]/10 px-6 py-4 border-b border-[var(--border)] flex items-center justify-between">
+              <div>
+                <h2 className="text-[16px] font-semibold text-[var(--fg)]">
+                  {mode === 'create' ? 'Crear nueva tarea' : 'Editar tarea'}
+                </h2>
+                <p className="text-[12.5px] text-[color:var(--muted)]">
+                  Define los datos básicos de la actividad para este curso.
+                </p>
+              </div>
+
+              <button
+                onClick={onClose}
+                className="p-1 rounded-full hover:bg-black/5 transition"
+              >
+                <CloseCircle size={22} color="var(--fg-soft)" />
+              </button>
             </div>
 
-            {/* Body (sin cambios en el JSX) */}
-            <div className="p-6 space-y-5 bg-[var(--section)]">
-              {/* ... (todos tus 'Field', 'MultiSelect', 'UploadArea', etc.) ... */}
+            {/* Body */}
+            <div className="p-6 space-y-6 bg-[var(--section)]">
+
+              {/* Selección de módulo */}
+              <Field label="Asignar a módulo">
+                <Select
+                  options={units.map((u) => ({ value: u.id, label: u.title }))}
+                  value={selectedUnitId}
+                  onChange={setSelectedUnitId}
+                  placeholder="Selecciona un módulo…"
+                />
+              </Field>
+
+              {/* Título + Fecha */}
+              <div className="grid gap-4 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)]">
+                <Field label="Título de la tarea">
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className={INPUT}
+                    placeholder="Nombre de la actividad"
+                  />
+                </Field>
+
+                <Field label="Fecha límite">
+                  <input
+                    type="date"
+                    value={dueAt}
+                    onChange={(e) => setDueAt(e.target.value)}
+                    className={INPUT}
+                  />
+                </Field>
+              </div>
+
+              {/* Descripción */}
+              <Field label="Descripción">
+                <textarea
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  className="w-full min-h-[120px] rounded-xl border border-[var(--border)] bg-[var(--card)] p-3 text-[14px] focus:ring-2 focus:ring-[var(--brand)]/40"
+                  placeholder="Describe la actividad..."
+                />
+              </Field>
+
+              {/* Opciones (demo) */}
+              <div className="grid gap-4 md:grid-cols-3">
+                <Field label="Tipo de entrega">
+                  <MultiSelect
+                    options={DELIVERY_TYPES}
+                    values={types}
+                    onChange={setTypes}
+                    placeholder="Seleccionar..."
+                  />
+                </Field>
+
+                <Field label="Indicadores">
+                  <MultiSelect
+                    options={INDICATORS}
+                    values={indicators}
+                    onChange={setIndicators}
+                    placeholder="Seleccionar..."
+                  />
+                </Field>
+
+                <Field label="Nivel educativo">
+                  <Select
+                    options={LEVELS.map((l) => ({ value: l, label: l }))}
+                    value={level}
+                    onChange={setLevel}
+                    placeholder="Seleccionar nivel..."
+                  />
+                </Field>
+              </div>
+
+              {/* Archivos */}
+              <div className="grid gap-4 md:grid-cols-2">
+                <UploadArea
+                  title="Rúbrica (opcional)"
+                  file={rubric}
+                  onPick={setRubric}
+                  onRemove={() => setRubric(null)}
+                />
+
+                <UploadList
+                  title="Material de apoyo"
+                  files={docs}
+                  onAdd={(f) => setDocs((prev) => [...prev, f])}
+                  onRemove={(idx) =>
+                    setDocs((prev) => prev.filter((_, i) => i !== idx))
+                  }
+                />
+              </div>
             </div>
 
-            {/* Footer con colores (ACTUALIZADO) */}
-            <div className="bg-[var(--card)] border-t border-[var(--border)] px-6 py-4 flex justify-end gap-2">
+            {/* Footer */}
+            <div className="bg-[var(--card)] border-t border-[var(--border)] px-6 py-4 flex justify-end gap-2 sticky bottom-0">
               <button
                 onClick={onClose}
                 className="h-9 px-4 rounded-xl text-[13px] bg-[var(--section)] hover:bg-[var(--border)] transition"
               >
                 Cancelar
               </button>
+
               <button
                 onClick={handleSave}
-                disabled={!canSave || busy} // 👈 'busy' controla el 'disabled'
-                className={`h-9 px-4 inline-flex items-center gap-2 rounded-xl text-white text-[13px]
-                            bg-[var(--accent-green)] hover:bg-[var(--accent-green)]/90 disabled:opacity-50 transition`}
+                disabled={!canSave || busy}
+                className="h-9 px-4 inline-flex items-center gap-2 rounded-xl text-white text-[13px] bg-[var(--accent-green)] hover:bg-[var(--accent-green)]/90 disabled:opacity-50 transition"
               >
                 <TickCircle size={18} color="#ffffff" />
-                {isSaving ? 'Guardando…' : 'Guardar'} {/* 👈 Muestra texto de carga */}
+                {isSaving ? 'Guardando…' : 'Guardar'}
               </button>
             </div>
           </div>
         </div>
       </div>
-    </Portal>       
+    </Portal>
   );
 }
 
-/* ----------- Subcomponentes reutilizables ----------- */
+/* === COMPONENTES REUTILIZABLES === */
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <label className="text-[13.5px] font-medium text-[var(--fg)] space-y-1">
+    <label className="text-[13.5px] font-medium text-[var(--fg)] space-y-1 block">
       <span>{label}</span>
       {children}
     </label>
@@ -185,22 +293,36 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
 }
 
 function MultiSelect({
-  options, values, onChange, placeholder,
-}: { options: string[]; values: string[]; onChange: (v: string[]) => void; placeholder?: string }) {
+  options,
+  values,
+  onChange,
+  placeholder,
+}: {
+  options: string[];
+  values: string[];
+  onChange: (v: string[]) => void;
+  placeholder?: string;
+}) {
   const [open, setOpen] = useState(false);
-  const toggle = (v: string) => onChange(values.includes(v) ? values.filter(x => x !== v) : [...values, v]);
+  const toggle = (v: string) =>
+    onChange(values.includes(v) ? values.filter((x) => x !== v) : [...values, v]);
 
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)} className={`${INPUT} text-left truncate`}>
-        {values.length ? values.join(', ') : (placeholder ?? 'Seleccionar…')}
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        className={`${INPUT} text-left truncate`}
+      >
+        {values.length ? values.join(', ') : placeholder ?? 'Seleccionar…'}
       </button>
+
       {open && (
-        <div className="absolute z-[220] mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-lg">
-          {options.map(op => (
+        <div className="absolute z-[500] mt-1 max-h-60 w-full overflow-auto rounded-xl border border-[var(--border)] bg-[var(--card)] p-2 shadow-lg">
+          {options.map((op) => (
             <label
               key={op}
-              className="flex items-center gap-2 px-2 py-1.5 text-[14px] hover:bg-[var(--section)] rounded-lg cursor-pointer transition"
+              className="flex items-center gap-2 px-2 py-1.5 text-[14px] hover:bg-[var(--section)] rounded-lg cursor-pointer"
             >
               <input
                 type="checkbox"
@@ -218,23 +340,42 @@ function MultiSelect({
 }
 
 function Select({
-  options, value, onChange, placeholder,
-}: { options: string[]; value?: string; onChange: (v: string) => void; placeholder?: string }) {
+  options,
+  value,
+  onChange,
+  placeholder,
+}: {
+  options: { value: string; label: string }[];
+  value?: string;
+  onChange: (v: string) => void;
+  placeholder?: string;
+}) {
   const [open, setOpen] = useState(false);
+
+  const current = options.find((o) => o.value === value)?.label;
+
   return (
     <div className="relative">
-      <button type="button" onClick={() => setOpen(o => !o)} className={`${INPUT} text-left`}>
-        {value || (placeholder ?? 'Seleccionar…')}
+      <button
+        type="button"
+        onClick={() => setOpen((x) => !x)}
+        className={`${INPUT} text-left`}
+      >
+        {current || placeholder || 'Seleccionar…'}
       </button>
+
       {open && (
-        <div className="absolute z-[220] mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 shadow-lg">
-          {options.map(op => (
+        <div className="absolute z-[500] mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--card)] p-1 shadow-lg">
+          {options.map((op) => (
             <button
-              key={op}
-              className="w-full text-left px-3 py-2 text-[14px] hover:bg-[var(--section)] rounded-lg transition"
-              onClick={() => { onChange(op); setOpen(false); }}
+              key={op.value}
+              className="w-full text-left px-3 py-2 text-[14px] hover:bg-[var(--section)] rounded-lg"
+              onClick={() => {
+                onChange(op.value);
+                setOpen(false);
+              }}
             >
-              {op}
+              {op.label}
             </button>
           ))}
         </div>
@@ -243,10 +384,17 @@ function Select({
   );
 }
 
-/* ---------------- Uploads ---------------- */
 function UploadArea({
-  title, file, onPick, onRemove,
-}: { title: string; file: File | null; onPick: (f: File) => void; onRemove: () => void }) {
+  title,
+  file,
+  onPick,
+  onRemove,
+}: {
+  title: string;
+  file: File | null;
+  onPick: (f: File) => void;
+  onRemove: () => void;
+}) {
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) onPick(f);
@@ -255,9 +403,12 @@ function UploadArea({
 
   return (
     <div className="rounded-xl border-2 border-dashed border-[var(--brand)]/35 bg-[var(--card)] p-4 hover:bg-[var(--section)] transition">
-      <div className="text-[13px] font-medium mb-2 text-[var(--brand)]">{title}</div>
+      <div className="text-[13px] font-medium mb-2 text-[var(--brand)]">
+        {title}
+      </div>
+
       {!file ? (
-        <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2 text-[13px] hover:bg-[var(--border)]/50 transition">
+        <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2 text-[13px] hover:bg-[var(--border)]">
           <DocumentDownload size={18} color="var(--brand)" />
           <span className="text-[var(--brand)]">Adjuntar archivo</span>
           <input type="file" className="hidden" onChange={onChange} />
@@ -265,7 +416,10 @@ function UploadArea({
       ) : (
         <div className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2">
           <div className="truncate text-[14px] text-[var(--fg)]">{file.name}</div>
-          <button className="hover:bg-rose-100 rounded-lg p-1" onClick={onRemove} title="Quitar">
+          <button
+            className="hover:bg-rose-100 rounded-lg p-1"
+            onClick={onRemove}
+          >
             <Trash size={18} color="#e11d48" />
           </button>
         </div>
@@ -275,8 +429,16 @@ function UploadArea({
 }
 
 function UploadList({
-  title, files, onAdd, onRemove,
-}: { title: string; files: File[]; onAdd: (f: File) => void; onRemove: (idx: number) => void }) {
+  title,
+  files,
+  onAdd,
+  onRemove,
+}: {
+  title: string;
+  files: File[];
+  onAdd: (f: File) => void;
+  onRemove: (idx: number) => void;
+}) {
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
     if (f) onAdd(f);
@@ -284,9 +446,10 @@ function UploadList({
   };
 
   return (
-    <div className="rounded-xl border-2 border-dashed border-[var(--brand)]/35 bg-[var(--card)] p-4 hover:bg-[var(--section)] transition">
+    <div className="rounded-xl border-2 border-dashed border-[var(--brand)]/35 bg-[var(--card)] p-4 hover:bg-[var(--section)]">
       <div className="text-[13px] font-medium mb-2 text-[var(--brand)]">{title}</div>
-      <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2 text-[13px] hover:bg-[var(--border)]/50 transition">
+
+      <label className="cursor-pointer inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2 text-[13px] hover:bg-[var(--border)]">
         <DocumentDownload size={18} color="var(--brand)" />
         <span className="text-[var(--brand)]">Adjuntar archivo</span>
         <input type="file" className="hidden" onChange={onChange} />
@@ -295,9 +458,15 @@ function UploadList({
       {!!files.length && (
         <ul className="mt-3 space-y-2">
           {files.map((f, i) => (
-            <li key={`${f.name}-${i}`} className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2">
+            <li
+              key={`${f.name}-${i}`}
+              className="flex items-center justify-between rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2"
+            >
               <div className="truncate text-[14px] text-[var(--fg)]">{f.name}</div>
-              <button className="hover:bg-rose-100 rounded-lg p-1" onClick={() => onRemove(i)} title="Quitar">
+              <button
+                className="hover:bg-rose-100 rounded-lg p-1"
+                onClick={() => onRemove(i)}
+              >
                 <Trash size={18} color="#e11d48" />
               </button>
             </li>
