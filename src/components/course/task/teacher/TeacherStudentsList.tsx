@@ -12,16 +12,16 @@ import { useSaveGrade } from '@/hooks/core/useSaveGrade';
 import StudentSubmissionModal from './StudentSubmissionModal';
 
 export default function TeacherStudentsList({ taskId, courseId }: { taskId: string; courseId: string }) {
-  
+
   // --- 2. HOOKS ACTUALIZADOS ---
   const { data, isLoading: loading } = useTaskSubmissionsList(taskId);
   const { saveGrade, isLoading: isSaving } = useSaveGrade(taskId);
-  
+
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
-  
+
   // (El 'useEffect' para cargar se elimina, useQuery lo maneja)
-  
+
   const items = data || []; // Aseguramos que 'items' sea un array
 
   const filtered = useMemo(() => {
@@ -85,11 +85,11 @@ export default function TeacherStudentsList({ taskId, courseId }: { taskId: stri
               <div className="flex items-center gap-3">
                 {/* 5. USA EL 'StatusChip' ACTUALIZADO */}
                 <StatusChip status={s.status} />
-                
+
                 <span className="inline-grid place-items-center h-8 min-w-[80px] px-2 rounded-xl border border-[var(--border)] bg-[var(--section)] text-[13px] font-medium">
                   {s.grade == null ? 'Sin nota' : `${s.grade}/20`}
                 </span>
-                
+
                 <button
                   onClick={() => setOpenId(s.id)}
                   className="h-9 w-9 grid place-items-center rounded-xl border border-[var(--border)] hover:bg-[var(--section)]"

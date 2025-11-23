@@ -1,5 +1,5 @@
 import { ApiSubmissionResponse } from '@/lib/types/core/submission.model';
-import { axiosCore } from '../config/axiosCore';
+import { axiosStudent } from '../config/axiosStudent';
 
 interface SubmitTaskPayload {
   taskId: string;
@@ -9,35 +9,54 @@ interface SubmitTaskPayload {
 }
 
 /**
- * Esto es un servicio SIMULADO para entregar una tarea.
- * En el futuro, enviará los archivos al backend de Core.
+ * Servicio para entregar una tarea con archivos adjuntos
  */
 export const submitTask = async ({
-  taskId, 
-  studentId, 
-  studentName, 
+  taskId,
+  studentId,
+  studentName,
   files
 }: SubmitTaskPayload): Promise<ApiSubmissionResponse> => {
-  
-  console.log(`Simulando entrega de tarea ${taskId} por ${studentName}...`);
-  // Simulamos un retraso de red
-  await new Promise(r => setTimeout(r, 1000)); 
 
-  // En una app real, harías esto:
-  // const formData = new FormData();
-  // formData.append('taskId', taskId);
-  // files.forEach(f => formData.append('files', f));
-  // const { data } = await axiosCore.post('/submissions', formData);
-  // return data;
+  try {
+    console.log(`📤 Entregando tarea ${taskId} por ${studentName}...`);
 
-  // Devolvemos una respuesta simulada
-  const submission: ApiSubmissionResponse = {
-    id: `sub-${Date.now()}`,
-    studentId: studentId,
-    studentName: studentName,
-    submittedAt: new Date().toISOString(),
-    attachments: files.map(f => ({ title: f.name }))
-  };
-  
-  return submission;
+    // Crear FormData con los archivos y el ID de actividad
+    const formData = new FormData();
+    formData.append('id_actividad', taskId);
+
+    // Agregar cada archivo al FormData
+    files.forEach(file => {
+      formData.append('files', file);
+    });
+
+    // Enviar al backend
+    const { data } = await axiosStudent.post('/entregas', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    if (!data.success) {
+      throw new Error(data.message || 'Error al entregar tarea');
+    }
+
+    console.log('✅ Tarea entregada exitosamente:', data.data);
+
+    // Mapear la respuesta del backend al formato esperado por el frontend
+    const submission: ApiSubmissionResponse = {
+      id: String(data.data.id_entrega),
+      studentId: studentId,
+      studentName: studentName,
+      submittedAt: data.data.fecha_entrega || new Date().toISOString(),
+      attachments: (data.data.archivos || []).map((archivo: any) => ({
+        title: archivo.nombre_archivo
+      }))
+    };
+
+    return submission;
+  } catch (error: any) {
+    console.error('❌ Error al entregar tarea:', error);
+    throw new Error(error.response?.data?.message || error.message || 'Error al entregar la tarea');
+  }
 };

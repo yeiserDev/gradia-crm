@@ -1,9 +1,14 @@
 import axios from 'axios';
 
-const STUDENT_API_URL = process.env.NEXT_PUBLIC_STUDENT_API_URL; // "http://localhost:3001/api/student"
+const STUDENT_API_URL = process.env.NEXT_PUBLIC_STUDENT_API_URL || 'http://localhost:3001/api/student';
 
 // 🔑 Clave para obtener el token de localStorage
 const ACCESS_TOKEN_KEY = 'gradia_access_token';
+
+// Validar que la URL esté configurada
+if (!process.env.NEXT_PUBLIC_STUDENT_API_URL) {
+  console.warn('⚠️ NEXT_PUBLIC_STUDENT_API_URL no está configurada. Usando valor por defecto:', STUDENT_API_URL);
+}
 
 export const axiosStudent = axios.create({
   baseURL: STUDENT_API_URL,

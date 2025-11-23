@@ -1,66 +1,97 @@
 import { useState, useEffect, useCallback } from 'react';
-import { TaskComment } from '@/lib/types/core/task.model'; // El tipo que acabamos de crear
-import { Role } from '@/lib/types/core/role.model'; // El tipo que ya teníamos
-import { useAuth } from '@/context/AuthProvider'; // Para saber el nombre del autor
+import { TaskComment } from '@/lib/types/core/task.model';
+import { Role } from '@/lib/types/core/role.model';
+import { useAuth } from '@/context/AuthProvider';
+import { axiosTeacher } from '@/lib/services/config/axiosTeacher';
+import { axiosStudent } from '@/lib/services/config/axiosStudent';
 
-// --- DATOS SIMULADOS (TEMPORALES) ---
-const MOCK_COMMENTS: TaskComment[] = [
-  {
-    id: 'c1',
-    authorName: 'Ana (Simulado)',
-    createdAt: new Date(Date.now() - 1000 * 60 * 5).toISOString(), // hace 5 min
-    body: 'Profe, ¿la fecha de entrega se puede mover?',
-    parentId: null,
-  },
-  {
-    id: 'c2',
-    authorName: 'Profesor (Simulado)',
-    createdAt: new Date(Date.now() - 1000 * 60 * 3).toISOString(), // hace 3 min
-    body: 'Hola Ana, no, la fecha es la que está indicada.',
-    parentId: 'c1', // Respuesta a c1
-  },
-];
-// --- FIN DE DATOS SIMULADOS ---
-
-/**
- * Hook SIMULADO para gestionar los comentarios de una tarea
- */
 export const useTaskComments = (taskId: string, role: Role) => {
-  const { user } = useAuth(); // Usamos el auth real
+  const { user } = useAuth();
   const [items, setItems] = useState<TaskComment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  // Simula la carga inicial de comentarios
-  useEffect(() => {
-    setLoading(true);
-    // Simulamos un fetch de red
-    setTimeout(() => {
-      // En una app real, aquí filtrarías por 'taskId'
-      setItems(MOCK_COMMENTS);
+  // Seleccionar la instancia de axios correcta según el rol
+  const axiosInstance = role === 'DOCENTE' ? axiosTeacher : axiosStudent;
+
+  // Función para aplanar la estructura anidada del backend
+  const flattenComments = useCallback((backendComments: any[]): TaskComment[] => {
+    let flatList: TaskComment[] = [];
+
+    backendComments.forEach((c) => {
+      // Mapear comentario principal
+      flatList.push({
+        id: c.id_comentario.toString(),
+        authorName: c.usuario?.persona
+          ? `${c.usuario.persona.nombre} ${c.usuario.persona.apellido}`
+          : c.usuario?.correo_institucional || 'Usuario',
+        createdAt: c.created_at,
+        body: c.contenido,
+        parentId: c.parent_id ? c.parent_id.toString() : null,
+      });
+
+      // Si tiene respuestas, procesarlas recursivamente (aunque el backend solo da 1 nivel por ahora)
+      if (c.respuestas && c.respuestas.length > 0) {
+        flatList = [...flatList, ...flattenComments(c.respuestas)];
+      }
+    });
+
+    return flatList;
+  }, []);
+
+  const fetchComments = useCallback(async () => {
+    try {
+      setLoading(true);
+      const response = await axiosInstance.get(`/comentarios/actividad/${taskId}`);
+
+      if (response.data.success) {
+        const flatComments = flattenComments(response.data.data);
+        setItems(flatComments);
+      }
+    } catch (error) {
+      console.error('Error al cargar comentarios:', error);
+    } finally {
       setLoading(false);
-    }, 800);
-  }, [taskId]); // Se ejecuta si el taskId cambia
+    }
+  }, [taskId, axiosInstance, flattenComments]);
 
-  // Simula la función de añadir un nuevo comentario
+  // Cargar comentarios al montar o cambiar taskId
+  useEffect(() => {
+    if (taskId) {
+      fetchComments();
+    }
+  }, [taskId, fetchComments]);
+
   const add = useCallback(async (body: string, parentId: string | null) => {
-    // Usamos el nombre del usuario real si está disponible
-    const authorName = user?.correo_institucional.split('@')[0] || (role === 'DOCENTE' ? 'Profesor (Tú)' : 'Estudiante (Tú)');
-    
-    const newComment: TaskComment = {
-      id: `c-${Date.now()}`,
-      authorName: authorName,
-      createdAt: new Date().toISOString(),
-      body,
-      parentId,
-    };
-    
-    // Añadimos el comentario a la lista local
-    setItems(currentItems => [...currentItems, newComment]);
-    
-    // Simulamos el tiempo que tarda la API en guardar
-    await new Promise(res => setTimeout(res, 300));
-  }, [role, user]); // Depende del 'role' y 'user'
+    try {
+      // Optimistic update (opcional, pero mejor esperar respuesta para tener ID real)
 
-  // Devolvemos el "contrato" que el componente espera
+      const response = await axiosInstance.post('/comentarios', {
+        id_actividad: taskId,
+        contenido: body,
+        parent_id: parentId
+      });
+
+      if (response.data.success) {
+        const newCommentBackend = response.data.data;
+
+        // Mapear el nuevo comentario
+        const newComment: TaskComment = {
+          id: newCommentBackend.id_comentario.toString(),
+          authorName: newCommentBackend.usuario?.persona
+            ? `${newCommentBackend.usuario.persona.nombre} ${newCommentBackend.usuario.persona.apellido}`
+            : user?.correo_institucional || 'Yo',
+          createdAt: newCommentBackend.created_at,
+          body: newCommentBackend.contenido,
+          parentId: newCommentBackend.parent_id ? newCommentBackend.parent_id.toString() : null,
+        };
+
+        setItems(current => [...current, newComment]);
+      }
+    } catch (error) {
+      console.error('Error al enviar comentario:', error);
+      alert('Error al enviar comentario');
+    }
+  }, [taskId, axiosInstance, user]);
+
   return { items, loading, add };
 };

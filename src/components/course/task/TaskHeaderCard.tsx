@@ -96,13 +96,7 @@ export default function TaskHeaderCard({
             {/* Nota + Ver detalle SOLO para 'ESTUDIANTE' */}
             {isStudent && (
               <>
-                <div
-                  aria-label="Nota"
-                  className="inline-grid place-items-center h-11 w-11 rounded-full border border-[var(--border)] bg-[var(--card)] text-[var(--brand)] font-semibold text-[15px]"
-                  title="Nota"
-                >
-                  {displayedGrade}
-                </div>
+                
                 <button
                   onClick={() => setOpen(true)}
                   className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[13px] hover:bg-[var(--section)] transition-colors"
