@@ -31,7 +31,7 @@ export default function SidebarActions() {
 
         <motion.button
           whileTap={{ scale: 0.97 }}
-          onClick={() => alert('Abrir lista de estudiantes')}
+          onClick={() => document.dispatchEvent(new CustomEvent('open-students-list'))}
           className="flex items-center justify-center gap-2 h-10 rounded-lg
                      bg-[var(--brand)]/10 text-[var(--brand)] font-medium text-[14px]
                      hover:bg-[var(--brand)]/20 transition"

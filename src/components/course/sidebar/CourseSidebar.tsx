@@ -14,6 +14,7 @@ import SidebarUnitList from './SidebarUnitList';
 import SidebarSkeleton from './SidebarSkeleton';
 import { NewUnitModal } from './NewUnitModal';
 import NewTaskModal from '@/components/course/task/teacher/NewTaskModal';
+import CourseStudentsModal from './CourseStudentsModal';
 
 type Variant = 'rail' | 'embedded';
 
@@ -42,6 +43,9 @@ export default function CourseSidebar({
   // --- Tarea ---
   const [showNewTaskModal, setShowNewTaskModal] = useState(false);
   const [editTaskId, setEditTaskId] = useState<string | undefined>();
+
+  // --- Estudiantes ---
+  const [showStudentsModal, setShowStudentsModal] = useState(false);
 
   const firstUnitId = course?.units?.[0]?.id ?? null;
   const effectiveOpen = useMemo(
@@ -72,6 +76,16 @@ export default function CourseSidebar({
     document.addEventListener('open-create-task', onOpenCreateTask);
     return () =>
       document.removeEventListener('open-create-task', onOpenCreateTask);
+  }, []);
+
+  // --- LISTENER: Abrir Lista de Estudiantes ---
+  useEffect(() => {
+    const onOpenStudentsList = () => {
+      setShowStudentsModal(true);
+    };
+    document.addEventListener('open-students-list', onOpenStudentsList);
+    return () =>
+      document.removeEventListener('open-students-list', onOpenStudentsList);
   }, []);
 
   // --- Emitir refresh de curso ---
@@ -166,17 +180,27 @@ const handleSaveTaskModal = (data: {
       {/* ───────────────────────────────────── */}
       {/*   MODAL: Nueva / Editar Tarea        */}
       {/* ───────────────────────────────────── */}
-     {role === 'DOCENTE' && course && (
-  <NewTaskModal
-    open={showNewTaskModal}
-    onClose={() => setShowNewTaskModal(false)}
-    courseId={course.id}
-    units={course.units ?? []}
+      {role === 'DOCENTE' && course && (
+        <NewTaskModal
+          open={showNewTaskModal}
+          onClose={() => setShowNewTaskModal(false)}
+          courseId={course.id}
+          units={course.units ?? []}
+          onSave={handleSaveTaskModal}
+        />
+      )}
 
-    onSave={handleSaveTaskModal}
-  />
-)}
-
+      {/* ───────────────────────────────────── */}
+      {/*   MODAL: Lista de Estudiantes        */}
+      {/* ───────────────────────────────────── */}
+      {role === 'DOCENTE' && course && (
+        <CourseStudentsModal
+          open={showStudentsModal}
+          onClose={() => setShowStudentsModal(false)}
+          courseId={course.id}
+          courseTitle={course.title}
+        />
+      )}
     </>
   );
 }

@@ -6,6 +6,7 @@ import {
   DocumentUpload, PlayCircle, Trash, DocumentText, Document, Code, Image as ImageIcon, Music, Folder,
 } from 'iconsax-react';
 import { motion, AnimatePresence } from '@/lib/utils/motion';
+import { toast } from 'sonner';
 
 // --- 1. IMPORTACIONES CORREGIDAS ---
 import type { TaskSubmission, ApiSubmissionResponse } from '@/lib/types/core/submission.model';
@@ -47,23 +48,32 @@ export default function TaskSubmissionBox({
   const handleOnSubmit = async () => {
     if (!files.length || busy) return;
 
-    // Llamamos a nuestro hook de mutación
-    const sub: ApiSubmissionResponse = await submitTask({ taskId, files });
-    
-    setFiles([]); // Limpiamos los archivos
+    try {
+      // Llamamos a nuestro hook de mutación
+      const sub: ApiSubmissionResponse = await submitTask({ taskId, files });
 
-    // Mapeamos la respuesta de la API al tipo que la UI espera
-    const mapped: TaskSubmission = {
-      id: sub.id,
-      studentId: sub.studentId,
-      studentName: sub.studentName,
-      submittedAt: sub.submittedAt ?? new Date().toISOString(),
-      files: (sub.attachments ?? []).map(a => ({ name: a.title, size: 0 })), // 'size' es 0 porque el mock no lo devuelve
-      grade: null,
-      feedback: null,
-      status: 'SUBMITTED',
-    };
-    onSubmitted(mapped);
+      setFiles([]); // Limpiamos los archivos
+
+      // Mapeamos la respuesta de la API al tipo que la UI espera
+      const mapped: TaskSubmission = {
+        id: sub.id,
+        studentId: sub.studentId,
+        studentName: sub.studentName,
+        submittedAt: sub.submittedAt ?? new Date().toISOString(),
+        files: (sub.attachments ?? []).map(a => ({ name: a.title, size: 0 })), // 'size' es 0 porque el mock no lo devuelve
+        grade: null,
+        feedback: null,
+        status: 'SUBMITTED',
+      };
+      onSubmitted(mapped);
+    } catch (error) {
+      // Mostrar notificación de error
+      toast.error('Error al enviar la tarea', {
+        description: error instanceof Error ? error.message : 'Ha ocurrido un error inesperado',
+        duration: 5000,
+      });
+      console.error('Error al enviar tarea:', error);
+    }
   };
 
   return (

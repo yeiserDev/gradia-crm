@@ -1,6 +1,6 @@
 'use client';
 
-import { DocumentDownload, TaskSquare, Document, DocumentText } from 'iconsax-react';
+import { DocumentDownload, TickCircle, Document, DocumentText } from 'iconsax-react';
 import { useMySubmission } from '@/hooks/core/useMySubmission';
 
 export default function MySubmissionDisplay({ taskId }: { taskId: string }) {
@@ -25,7 +25,7 @@ export default function MySubmissionDisplay({ taskId }: { taskId: string }) {
     <section className="rounded-2xl border border-[var(--border)] bg-[var(--card)] p-5">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <TaskSquare size={20} color="currentColor" />
+        <TickCircle size={20} className="text-green-500" />
         <h3 className="font-semibold text-[15px]">Tu entrega</h3>
       </div>
 

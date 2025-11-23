@@ -2,9 +2,10 @@
 'use client';
 
 import { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
 
 import type { Role } from '@/lib/types/core/role.model';
-import type { TaskSubmission } from '@/lib/types/core/submission.model';
 import type { Resource } from '@/hooks/core/useTaskResources';
 
 import { useTaskDetails } from '@/hooks/core/useTaskDetails';
@@ -30,6 +31,7 @@ export default function TaskRolePanelClient({
   courseId: string;
   taskId: string;
 }) {
+  const queryClient = useQueryClient();
   const { data: task, isLoading: loadingTask } = useTaskDetails(taskId);
 
   const {
@@ -139,12 +141,24 @@ export default function TaskRolePanelClient({
 
           {/* DERECHA */}
           <div className="w-full lg:w-[280px] shrink-0 space-y-6">
+            {/* Mostrar la entrega si ya existe */}
             <MySubmissionDisplay taskId={taskId} />
 
+            {/* Mostrar el formulario de subida solo si NO hay entrega */}
             {!mySubmission && (
               <TaskSubmissionBox
                 taskId={taskId}
-                onSubmitted={() => window.location.reload()}
+                onSubmitted={() => {
+                  // Invalidar las queries para refrescar los datos
+                  queryClient.invalidateQueries({ queryKey: ['mySubmission', taskId] });
+                  queryClient.invalidateQueries({ queryKey: ['taskDetails', taskId] });
+
+                  // Mostrar notificación de éxito
+                  toast.success('¡Tarea enviada exitosamente!', {
+                    description: 'Tu tarea ha sido entregada correctamente',
+                    duration: 4000,
+                  });
+                }}
               />
             )}
           </div>

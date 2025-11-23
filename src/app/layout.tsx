@@ -6,6 +6,7 @@ import './globals.css';
 import { ThemeProvider } from '@/components/providers/ThemeProvider'; // Tu wrapper
 import { QueryProvider } from '@/components/providers/QueryProvider';
 import { AuthProvider } from '@/context/AuthProvider';
+import { Toaster } from 'sonner';
 
 export const metadata: Metadata = {
   title: 'GradIA',
@@ -22,7 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="es" suppressHydrationWarning>
       <body className={`${poppins.className} antialiased`}>
-        
+
         <QueryProvider>
           <ThemeProvider>
             <AuthProvider>
@@ -30,7 +31,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             </AuthProvider>
           </ThemeProvider>
         </QueryProvider>
-        
+
+        <Toaster position="top-right" richColors />
+
       </body>
     </html>
   );
