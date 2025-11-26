@@ -1,5 +1,8 @@
 # 🎓 GradIA CRM - Sistema de Gestión de Cursos con IA
 
+<img width="1225" height="553" alt="image" src="https://github.com/user-attachments/assets/8e65ee63-45ed-4a8d-b945-56bdaab6e085" />
+
+
 **Frontend de GradIA** - Plataforma web construida con Next.js 15 para la gestión de cursos, actividades y evaluación automática mediante Inteligencia Artificial.
 
 ![Next.js](https://img.shields.io/badge/Next.js-15.5.2-black?logo=next.js)
