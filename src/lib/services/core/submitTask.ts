@@ -21,14 +21,14 @@ export const submitTask = async ({
   try {
     console.log(`📤 Entregando tarea ${taskId} por ${studentName}...`);
 
-    // Crear FormData con los archivos y el ID de actividad
+    // Crear FormData con el archivo y el ID de actividad
     const formData = new FormData();
     formData.append('id_actividad', taskId);
 
-    // Agregar cada archivo al FormData
-    files.forEach(file => {
-      formData.append('files', file);
-    });
+    // El backend espera UN solo archivo con el nombre 'archivo'
+    if (files.length > 0) {
+      formData.append('archivo', files[0]); // Solo el primer archivo
+    }
 
     // Enviar al backend
     const { data } = await axiosStudent.post('/entregas', formData, {
@@ -49,14 +49,15 @@ export const submitTask = async ({
       studentId: studentId,
       studentName: studentName,
       submittedAt: data.data.fecha_entrega || new Date().toISOString(),
-      attachments: (data.data.archivos || []).map((archivo: any) => ({
+      attachments: (data.data.archivos || []).map((archivo: { nombre_archivo: string }) => ({
         title: archivo.nombre_archivo
       }))
     };
 
     return submission;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('❌ Error al entregar tarea:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al entregar la tarea');
+    throw new Error(err.response?.data?.message || err.message || 'Error al entregar la tarea');
   }
 };

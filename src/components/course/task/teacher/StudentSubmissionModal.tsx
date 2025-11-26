@@ -29,6 +29,11 @@ export default function StudentSubmissionModal({
   onClose: () => void;
   onSave: (grade?: number, feedback?: string) => void;
 }) {
+  // Detectar si hay video - NO PERMITIR CALIFICACIÓN MANUAL
+  const hasVideo = submission.attachments?.some(a =>
+    a.type === 'video' || a.type?.includes('video/')
+  ) ?? false;
+
   const [grade, setGrade] = useState<string>(
     submission.grade?.toString() ?? ''
   );
@@ -50,7 +55,7 @@ export default function StudentSubmissionModal({
 
   const gNum = grade.trim() === '' ? undefined : Number(grade);
   const canSave =
-    gNum == null || (!Number.isNaN(gNum) && gNum >= 0 && gNum <= 20);
+    !hasVideo && (gNum == null || (!Number.isNaN(gNum) && gNum >= 0 && gNum <= 20));
 
   return (
     <Portal>
@@ -81,8 +86,27 @@ export default function StudentSubmissionModal({
               </button>
             </div>
 
-            {/* Body (sin cambios) */}
+            {/* Body */}
             <div className="p-5 grid md:grid-cols-2 gap-5">
+              {/* ADVERTENCIA SI HAY VIDEO */}
+              {hasVideo && (
+                <div className="md:col-span-2 rounded-xl border-2 border-amber-500 bg-amber-50 dark:bg-amber-900/20 p-4">
+                  <div className="flex items-start gap-3">
+                    <div className="text-2xl">🤖</div>
+                    <div className="flex-1">
+                      <h4 className="text-[14px] font-semibold text-amber-900 dark:text-amber-200 mb-1">
+                        Video siendo evaluado por IA
+                      </h4>
+                      <p className="text-[13px] text-amber-800 dark:text-amber-300">
+                        Este estudiante subió un video y está siendo evaluado automáticamente por Gradia.
+                        Solo puedes calificar entregas que <strong>no incluyan video</strong>.
+                        Para ver la evaluación de IA, usa el botón <strong>&quot;👁️ Ver evaluación de IA&quot;</strong> en la lista.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Adjuntos */}
               <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
                 <h4 className="text-[14px] font-semibold mb-3">Adjuntos</h4>
@@ -104,13 +128,20 @@ export default function StudentSubmissionModal({
                             {label(a.type)}
                           </p>
                         </div>
-                        <a
-                          href={a.url}
-                          target="_blank"
-                          className="text-[13px] underline underline-offset-2 text-[var(--brand)]"
-                        >
-                          Abrir
-                        </a>
+                        {a.type === 'video' ? (
+                          <div className="text-[12px] text-[color:var(--muted)] text-right max-w-[140px]">
+                            <div className="font-medium text-[var(--brand)]">🤖 Gradia evaluando...</div>
+                            <div className="text-[11px] mt-0.5">Video en proceso de calificación por IA</div>
+                          </div>
+                        ) : (
+                          <a
+                            href={a.url}
+                            target="_blank"
+                            className="text-[13px] underline underline-offset-2 text-[var(--brand)]"
+                          >
+                            Abrir
+                          </a>
+                        )}
                       </li>
                     ))}
                   </ul>
@@ -121,15 +152,18 @@ export default function StudentSubmissionModal({
                 )}
               </section>
 
-              {/* Calificación (sin cambios) */}
+              {/* Calificación */}
               <section className="rounded-xl border border-[var(--border)] bg-[var(--card)] p-4">
                 <h4 className="text-[14px] font-semibold mb-3">Calificación</h4>
                 <label className="text-[13px] font-medium">
                   Nota (0 – 20)
                   <input
-                    className="mt-1 h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 text-[14px] focus:outline-none focus:border-[var(--brand)]"
+                    disabled={hasVideo}
+                    className={`mt-1 h-10 w-full rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 text-[14px] focus:outline-none focus:border-[var(--brand)] ${
+                      hasVideo ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
                     inputMode="numeric"
-                    placeholder="Ej: 16"
+                    placeholder={hasVideo ? 'No disponible para videos' : 'Ej: 16'}
                     value={grade}
                     onChange={(e) =>
                       setGrade(e.target.value.replace(',', '.'))
@@ -139,9 +173,12 @@ export default function StudentSubmissionModal({
                 <label className="block text-[13px] font-medium mt-3">
                   Feedback
                   <textarea
+                    disabled={hasVideo}
                     rows={5}
-                    className="mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2 text-[14px] focus:outline-none focus:border-[var(--brand)]"
-                    placeholder="Comentarios para el estudiante…"
+                    className={`mt-1 w-full rounded-xl border border-[var(--border)] bg-[var(--section)] px-3 py-2 text-[14px] focus:outline-none focus:border-[var(--brand)] ${
+                      hasVideo ? 'opacity-50 cursor-not-allowed' : ''
+                    }`}
+                    placeholder={hasVideo ? 'No disponible para videos' : 'Comentarios para el estudiante…'}
                     value={feedback}
                     onChange={(e) => setFeedback(e.target.value)}
                   />

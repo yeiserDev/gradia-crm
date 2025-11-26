@@ -33,7 +33,14 @@ export const getCourseById = async (
     const cursoData = cursoResponse.data.data;
 
     // 2. Obtener unidades del curso
-    let unidades: any[] = [];
+    type UnidadBackend = {
+      id_unidad: number;
+      titulo_unidad: string;
+      descripcion?: string;
+      numero_unidad: number;
+      id_curso: number;
+    };
+    let unidades: UnidadBackend[] = [];
     try {
       const unidadesResponse = await axios.get(`/unidades/curso/${courseId}`);
       if (unidadesResponse.data.success) {
@@ -45,9 +52,16 @@ export const getCourseById = async (
     }
 
     // 3. Para cada unidad, obtener sus actividades
+    type ActividadBackend = {
+      id_actividad: number;
+      titulo_actividad?: string;
+      nombre_actividad?: string;
+      fecha_vencimiento?: string;
+      fecha_limite?: string;
+    };
     const unidadesConActividades = await Promise.all(
       unidades.map(async (unidad) => {
-        let actividades: any[] = [];
+        let actividades: ActividadBackend[] = [];
         try {
           const actividadesResponse = await axios.get(`/actividades/unidad/${unidad.id_unidad}`);
           if (actividadesResponse.data.success) {
@@ -80,7 +94,7 @@ export const getCourseById = async (
           numero_unidad: unidad.numero_unidad,
           id_curso: unidad.id_curso,
           tasks: (unidad.actividades || [])
-            .map((actividad: any) => ({
+            .map((actividad: ActividadBackend) => ({
               id: actividad.id_actividad.toString(),
               title: actividad.titulo_actividad || actividad.nombre_actividad,
               dueAt: actividad.fecha_vencimiento || actividad.fecha_limite
@@ -123,9 +137,23 @@ export const refreshCourseUnits = async (
     const unidades = unidadesResponse.data.data || [];
 
     // Para cada unidad, obtener sus actividades
+    type ActividadBackend = {
+      id_actividad: number;
+      titulo_actividad?: string;
+      nombre_actividad?: string;
+      fecha_vencimiento?: string;
+      fecha_limite?: string;
+    };
+    type UnidadBackend = {
+      id_unidad: number;
+      titulo_unidad: string;
+      descripcion?: string;
+      numero_unidad: number;
+      id_curso: number;
+    };
     const unidadesConActividades = await Promise.all(
-      unidades.map(async (unidad: any) => {
-        let actividades: any[] = [];
+      unidades.map(async (unidad: UnidadBackend) => {
+        let actividades: ActividadBackend[] = [];
         try {
           const actividadesResponse = await axios.get(`/actividades/unidad/${unidad.id_unidad}`);
           if (actividadesResponse.data.success) {
@@ -141,7 +169,7 @@ export const refreshCourseUnits = async (
           descripcion: unidad.descripcion,
           numero_unidad: unidad.numero_unidad,
           id_curso: unidad.id_curso,
-          tasks: (actividades || []).map((actividad: any) => ({
+          tasks: (actividades || []).map((actividad: ActividadBackend) => ({
             id: actividad.id_actividad.toString(),
             title: actividad.titulo_actividad || actividad.nombre_actividad,
             dueAt: actividad.fecha_vencimiento || actividad.fecha_limite

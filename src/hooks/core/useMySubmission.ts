@@ -35,9 +35,10 @@ export const useMySubmission = (taskId: string, enabled: boolean = true) => {
 
         console.log('📥 [useMySubmission] Data from backend:', data.data);
         return data.data;
-      } catch (error: any) {
+      } catch (error: unknown) {
         // Si el error es 404 o 403, significa que no hay entrega o no tiene acceso
-        if (error.response?.status === 404 || error.response?.status === 403) {
+        const axiosError = error as { response?: { status?: number } };
+        if (axiosError.response?.status === 404 || axiosError.response?.status === 403) {
           return null;
         }
         throw error;
@@ -45,5 +46,12 @@ export const useMySubmission = (taskId: string, enabled: boolean = true) => {
     },
     enabled: enabled, // Solo ejecutar si está habilitado
     retry: false, // No reintentar si falla
+    refetchInterval: (query) => {
+      const submission = query.state.data;
+      if (!submission) return false; // Sin entrega, no hay polling
+      const isPendingGrade = submission.calificacion == null;
+      return isPendingGrade ? 10000 : false; // Cada 10s hasta que exista nota
+    },
+    refetchIntervalInBackground: true,
   });
 };

@@ -22,26 +22,53 @@ export default function TaskSubmissionBox({
 }) {
   // --- 2. HOOKS ACTUALIZADOS ---
   const { submitTask, isLoading: busy } = useSubmitTask(); // 👈 El nuevo hook
+  const MAX_FILES = 1;
   const [files, setFiles] = useState<File[]>([]);
   const [hover, setHover] = useState<'file' | 'video' | null>(null);
   // 'busy' y 'user' ahora vienen de los hooks
 
+  const reachedFileLimit = files.length >= MAX_FILES;
+
+  const appendFiles = (incoming: File[]) => {
+    if (!incoming.length) return;
+    setFiles((prev) => {
+      if (prev.length >= MAX_FILES) {
+        toast.error('Solo puedes adjuntar un archivo. Elimina el actual para cambiarlo.');
+        return prev;
+      }
+      const space = MAX_FILES - prev.length;
+      const accepted = incoming.slice(0, space);
+      if (incoming.length > space) {
+        toast.error('Solo puedes adjuntar un archivo. Se tomará solo el primero.');
+      }
+      return accepted.length ? [...prev, ...accepted] : prev;
+    });
+  };
+
   function handlePickFiles(accept?: string) {
+    if (reachedFileLimit) {
+      toast.error('Solo puedes adjuntar un archivo. Elimina el actual para cambiarlo.');
+      return;
+    }
     const input = document.createElement('input');
     input.type = 'file';
-    input.multiple = true;
+    input.multiple = false;
     if (accept) input.accept = accept;
     input.onchange = () => {
       const picked = Array.from(input.files ?? []);
-      setFiles((prev) => [...prev, ...picked]);
+      appendFiles(picked);
     };
     input.click();
   }
 
   function onDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault();
+    if (reachedFileLimit) {
+      toast.error('Ya adjuntaste un archivo. Elimina el actual para subir otro.');
+      return;
+    }
     const dropped = Array.from(e.dataTransfer.files ?? []);
-    if (dropped.length) setFiles((prev) => [...prev, ...dropped]);
+    if (dropped.length) appendFiles(dropped);
   }
 
   // --- 3. LÓGICA DE SUBMIT ACTUALIZADA ---
@@ -92,10 +119,11 @@ export default function TaskSubmissionBox({
               whileTap={{ scale: 0.96 }}
               onMouseEnter={() => setHover('file')}
               onMouseLeave={() => setHover(null)}
-              className="icon-btn icon-btn--round"
+              className={`icon-btn icon-btn--round ${reachedFileLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => handlePickFiles()}
               aria-label="Adjuntar archivo"
               title="Adjuntar archivo"
+              disabled={reachedFileLimit}
             >
               <DocumentUpload size={20} color="currentColor" />
             </motion.button>
@@ -103,10 +131,11 @@ export default function TaskSubmissionBox({
               whileTap={{ scale: 0.96 }}
               onMouseEnter={() => setHover('video')}
               onMouseLeave={() => setHover(null)}
-              className="icon-btn icon-btn--round"
+              className={`icon-btn icon-btn--round ${reachedFileLimit ? 'opacity-50 cursor-not-allowed' : ''}`}
               onClick={() => handlePickFiles('video/*')}
               aria-label="Adjuntar video"
               title="Adjuntar video"
+              disabled={reachedFileLimit}
             >
               <PlayCircle size={20} color="currentColor" />
             </motion.button>
@@ -124,7 +153,7 @@ export default function TaskSubmissionBox({
             )}
           </AnimatePresence>
           <div className="text-[13px] text-[color:var(--muted)]">
-            Arrastra y suelta aquí o usa los botones
+            Arrastra y suelta aquí o usa los botones (máx. 1 archivo)
           </div>
         </motion.div>
       </div>

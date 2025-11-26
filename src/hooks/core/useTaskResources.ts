@@ -83,37 +83,24 @@ export const useTaskResources = (taskId: string) => {
     }
   }, [taskId, user]);
 
-  // Añadir recurso
-  const addResource = async (r: Omit<Resource, 'id'>) => {
+  // Añadir recurso con archivo
+  const addResource = async (file: File) => {
     try {
-      // 1. Subir archivo si es necesario (por ahora usamos la URL directamente)
-      // En el futuro, aquí subirías el archivo real
+      console.log('📎 [useTaskResources] Añadiendo recurso con archivo:', file.name);
 
-      // 2. Detectar tipo de material
-      let tipoDocumento: MaterialType = 'otro';
-      if (r.type === 'pdf') tipoDocumento = 'pdf';
-      else if (r.type === 'video') tipoDocumento = 'video';
-      else if (r.type === 'slide') tipoDocumento = 'ppt';
-      else if (r.type === 'document') tipoDocumento = 'doc';
-      else if (r.type === 'link') tipoDocumento = 'link';
-
-      // 3. Crear material en el backend
-      const newMaterial = await createMaterial({
-        id_actividad: parseInt(taskId),
-        nombre_documento: r.title,
-        tipo_documento: tipoDocumento,
-        url_archivo: r.url,
-      });
+      // Crear material en el backend con el archivo
+      const newMaterial = await createMaterial(parseInt(taskId), file);
 
       if (newMaterial) {
         const newResource = materialToResource(newMaterial);
         setResources(prev => [newResource, ...prev]);
+        console.log('✅ [useTaskResources] Recurso añadido exitosamente');
         return newResource;
       }
 
       throw new Error('No se pudo crear el material');
     } catch (error) {
-      console.error('Error al añadir recurso:', error);
+      console.error('❌ [useTaskResources] Error al añadir recurso:', error);
       throw error;
     }
   };

@@ -27,7 +27,7 @@ export const useCreateUnit = () => {
       // queryClient.invalidateQueries({ queryKey: ['course', createdUnit.id_curso] });
     },
 
-    onError: (err: any) => {
+    onError: (err: unknown) => {
       console.error('❌ Error al crear unidad:', err);
     },
   });

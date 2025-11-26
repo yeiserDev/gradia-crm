@@ -49,7 +49,7 @@ export const getSubmissionsList = async (taskId: string): Promise<Submission[]> 
     };
 
     // Mapear entregas del backend al formato del frontend
-    return entregas.map((entrega: EntregaBackend) => {
+    const mappedSubmissions = entregas.map((entrega: EntregaBackend) => {
       // Determinar el status correcto
       let status: 'NOT_SUBMITTED' | 'SUBMITTED' | 'GRADED' = 'NOT_SUBMITTED';
 
@@ -83,6 +83,46 @@ export const getSubmissionsList = async (taskId: string): Promise<Submission[]> 
         })) || []
       };
     });
+
+    // Deduplicar por studentId - usar estrategia de prioridad
+    const deduplicationMap = new Map<string, Submission>();
+
+    mappedSubmissions.forEach((submission) => {
+      const existing = deduplicationMap.get(submission.studentId);
+
+      if (!existing) {
+        // Primera vez que vemos este estudiante
+        deduplicationMap.set(submission.studentId, submission);
+      } else {
+        // Ya existe, decidir cuál mantener basado en prioridad:
+        // 1. GRADED > SUBMITTED > NOT_SUBMITTED
+        // 2. Si mismo status, mantener el que tiene id_entrega más alto (más reciente)
+
+        const priorityOrder = { 'GRADED': 3, 'SUBMITTED': 2, 'NOT_SUBMITTED': 1 };
+        const existingPriority = priorityOrder[existing.status];
+        const newPriority = priorityOrder[submission.status];
+
+        if (newPriority > existingPriority) {
+          // Nueva entrada tiene mayor prioridad
+          deduplicationMap.set(submission.studentId, submission);
+        } else if (newPriority === existingPriority) {
+          // Mismo status, comparar IDs (mantener el más reciente)
+          const existingId = parseInt(existing.id) || 0;
+          const newId = parseInt(submission.id) || 0;
+
+          if (newId > existingId) {
+            deduplicationMap.set(submission.studentId, submission);
+          }
+        }
+        // Si existingPriority > newPriority, mantener el existente (no hacer nada)
+      }
+    });
+
+    const deduplicated = Array.from(deduplicationMap.values());
+
+    console.log(`🔧 Después de deduplicación: ${mappedSubmissions.length} → ${deduplicated.length} estudiantes únicos`);
+
+    return deduplicated;
   } catch (error) {
     console.error('Error al obtener lista de entregas:', error);
     return [];
@@ -125,15 +165,16 @@ export const saveGrade = async (
       feedback: entrega.retroalimentacion ?? null,
       status: entrega.calificacion !== null && entrega.calificacion !== undefined ? 'GRADED' : 'SUBMITTED',
       avatarUrl: null,
-      attachments: entrega.archivos?.map((archivo: any) => ({
+      attachments: entrega.archivos?.map((archivo: { id_archivo_entrega?: number; tipo_archivo?: string; nombre_archivo?: string; url_archivo?: string }) => ({
         id: archivo.id_archivo_entrega?.toString() || '0',
         type: archivo.tipo_archivo || 'unknown',
         title: archivo.nombre_archivo || 'Sin título',
         url: archivo.url_archivo || '#'
       })) || []
     };
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('❌ Error al guardar calificación:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al guardar la calificación');
+    throw new Error(err.response?.data?.message || err.message || 'Error al guardar la calificación');
   }
 };

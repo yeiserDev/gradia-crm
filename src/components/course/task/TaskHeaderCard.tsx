@@ -10,9 +10,15 @@ import type { Role } from '@/lib/types/core/role.model';
 // (Asumimos que estos tipos son locales o mocks temporales)
 type RubricItem = { label: string; score: number; max: number; date?: string; };
 type AIFeedback = {
-  videoUrl?: string; overall?: string;
+  videoUrl?: string;
+  overall?: string;
   bullets?: Array<{ text: string; at?: string }>;
   aspects?: Array<{ label: string; score: number; max: number }>;
+  // Datos de Elasticsearch
+  notas_por_criterio?: Record<string, number>;
+  retroalimentaciones_por_criterio?: Record<string, string>;
+  retroalimentacion_final?: string;
+  nota_final?: number;
 };
 
 const toGradeNumber = (grade: unknown): number | null => {
@@ -27,22 +33,38 @@ export default function TaskHeaderCard({
   title,
   dueAt,
   grade,
+  manualGrade,
+  manualFeedback,
+  hasVideo = false,
   eyebrow,
   dueHref,
   rubric,
   ai,
+  onViewDetail,
 }: {
   // --- 3. CORRECCIÓN DEL TIPO DE PROP ---
   role?: Role; // 👈 Acepta 'DOCENTE', 'ESTUDIANTE', 'ADMIN'
   title: string;
   dueAt?: string | null;
   grade?: string | number | null;
+  manualGrade?: number | null;
+  manualFeedback?: string | null;
+  hasVideo?: boolean;
   eyebrow?: string;
   dueHref?: string;
   rubric?: RubricItem[];
   ai?: AIFeedback;
+  onViewDetail?: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
+
+  const handleViewDetail = async () => {
+    // Ejecutar callback antes de abrir el modal (para refetch de datos)
+    if (onViewDetail) {
+      await onViewDetail();
+    }
+    setOpen(true);
+  };
 
   const formattedDate = dueAt
     ? new Date(dueAt).toLocaleDateString('es-PE', { day: '2-digit', month: '2-digit', year: 'numeric' })
@@ -98,7 +120,7 @@ export default function TaskHeaderCard({
               <>
                 
                 <button
-                  onClick={() => setOpen(true)}
+                  onClick={handleViewDetail}
                   className="inline-flex items-center gap-2 rounded-xl border border-[var(--border)] bg-[var(--card)] px-3 py-2 text-[13px] hover:bg-[var(--section)] transition-colors"
                 >
                   <Eye size={18} color="var(--icon)" />
@@ -126,6 +148,9 @@ export default function TaskHeaderCard({
           isOpen={open}
           onClose={() => setOpen(false)}
           grade={gradeNum}
+          manualGrade={manualGrade}
+          manualFeedback={manualFeedback}
+          hasVideo={hasVideo}
           rubric={rubricData}
           ai={aiData}
         />

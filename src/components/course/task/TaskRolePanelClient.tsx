@@ -1,7 +1,7 @@
 // src/components/course/task/TaskRolePanelClient.tsx
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 
@@ -12,6 +12,7 @@ import { useTaskDetails } from '@/hooks/core/useTaskDetails';
 import { useSaveTask } from '@/hooks/core/useSaveTask';
 import { useTaskResources } from '@/hooks/core/useTaskResources';
 import { useMySubmission } from '@/hooks/core/useMySubmission';
+import { useAIFeedback } from '@/hooks/core/useAIFeedback';
 
 import TaskHeaderCard from './TaskHeaderCard';
 import TaskDescription from './pieces/TaskDescription';
@@ -41,8 +42,29 @@ export default function TaskRolePanelClient({
     removeResource,
   } = useTaskResources(taskId);
 
+  const hasRubricResource = useMemo(
+    () =>
+      resources?.some((res) =>
+        res.title?.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').includes('rubrica')
+      ) ?? false,
+    [resources]
+  );
+
   const { saveTask, isLoading: isSaving } = useSaveTask();
   const { data: mySubmission } = useMySubmission(taskId, role === 'ESTUDIANTE');
+
+  // Obtener retroalimentación de IA usando el ID de la entrega
+  const { data: aiFeedback, isLoading: isLoadingAI } = useAIFeedback(
+    mySubmission?.id_entrega
+  );
+
+  // Refetch agresivo de AI feedback cuando la calificación cambia
+  useEffect(() => {
+    if (mySubmission?.calificacion != null && mySubmission?.id_entrega) {
+      // Refetch inmediato (no solo invalidar) para obtener datos frescos de Elasticsearch
+      void queryClient.refetchQueries({ queryKey: ['ai-feedback', mySubmission.id_entrega] });
+    }
+  }, [mySubmission?.calificacion, mySubmission?.id_entrega, queryClient]);
 
   const [openAdd, setOpenAdd] = useState(false);
 
@@ -56,13 +78,20 @@ export default function TaskRolePanelClient({
     }).catch(() => alert('Error al guardar descripción'));
   };
 
-  const handleAddResource = async (r: {
-    title: string;
-    type: Resource['type'];
-    url: string;
-    size?: string;
-  }) => {
-    await addResource(r).catch(() => alert('Error al añadir recurso'));
+  const handleAddResource = async (file: File) => {
+    try {
+      await addResource(file);
+      toast.success('Recurso añadido exitosamente', {
+        description: `Se ha subido ${file.name} correctamente`,
+        duration: 3000,
+      });
+    } catch (error: unknown) {
+      const err = error instanceof Error ? error : new Error('No se pudo subir el archivo');
+      toast.error('Error al añadir recurso', {
+        description: err.message,
+        duration: 4000,
+      });
+    }
   };
 
   const handleRemoveResource = async (id: string) => {
@@ -106,6 +135,23 @@ export default function TaskRolePanelClient({
           eyebrow="Módulo 1 (Simulado)"
           title={task.title}
           dueAt={task.dueAt ?? undefined}
+          grade={aiFeedback?.nota_final ?? mySubmission?.calificacion ?? undefined}
+          manualGrade={mySubmission?.calificacion ?? undefined}
+          manualFeedback={mySubmission?.retroalimentacion ?? undefined}
+          hasVideo={mySubmission?.archivos?.some(f => f.tipo_archivo.includes('video')) ?? false}
+          ai={aiFeedback ? {
+            videoUrl: mySubmission?.archivos?.find(f => f.tipo_archivo.includes('video'))?.url_archivo,
+            retroalimentacion_final: aiFeedback.retroalimentacion_final,
+            nota_final: aiFeedback.nota_final,
+            notas_por_criterio: aiFeedback.notas_por_criterio,
+            retroalimentaciones_por_criterio: aiFeedback.retroalimentaciones_por_criterio,
+          } : undefined}
+          onViewDetail={async () => {
+            // Refetch de datos antes de abrir el modal para asegurar datos frescos
+            if (mySubmission?.id_entrega) {
+              await queryClient.refetchQueries({ queryKey: ['ai-feedback', mySubmission.id_entrega] });
+            }
+          }}
         />
       </div>
 
@@ -148,9 +194,11 @@ export default function TaskRolePanelClient({
             {!mySubmission && (
               <TaskSubmissionBox
                 taskId={taskId}
-                onSubmitted={() => {
-                  // Invalidar las queries para refrescar los datos
-                  queryClient.invalidateQueries({ queryKey: ['mySubmission', taskId] });
+                onSubmitted={async () => {
+                  // Refetch inmediato (más agresivo que invalidate)
+                  await queryClient.refetchQueries({ queryKey: ['my-submission', taskId] });
+
+                  // También invalidar para asegurar
                   queryClient.invalidateQueries({ queryKey: ['taskDetails', taskId] });
 
                   // Mostrar notificación de éxito
@@ -191,6 +239,7 @@ export default function TaskRolePanelClient({
         open={openAdd}
         onClose={() => setOpenAdd(false)}
         onSubmit={handleAddResource}
+        hasRubricUploaded={hasRubricResource}
       />
     </div>
   );

@@ -2,7 +2,7 @@
 
 import { axiosTeacher } from '../config/axiosTeacher';
 import { axiosStudent } from '../config/axiosStudent';
-import type { Material, CreateMaterialPayload, UpdateMaterialPayload } from '@/lib/types/core/material.model';
+import type { Material, UpdateMaterialPayload } from '@/lib/types/core/material.model';
 
 /**
  * TEACHER: Obtener todos los materiales de una actividad
@@ -43,21 +43,35 @@ export const getMaterialsByActivityStudent = async (actividadId: string): Promis
 };
 
 /**
- * TEACHER: Crear un nuevo material
- * NOTA: Por ahora solo soportamos URLs. Para archivos reales necesitarás implementar upload de archivos.
+ * TEACHER: Crear un nuevo material con archivo
+ * El backend espera multipart/form-data con:
+ * - archivo: el archivo .docx
+ * - id_actividad: ID de la actividad
  */
-export const createMaterial = async (payload: CreateMaterialPayload): Promise<Material | null> => {
+export const createMaterial = async (actividadId: number, file: File): Promise<Material | null> => {
   try {
-    const response = await axiosTeacher.post('/materiales', payload);
+    console.log('📤 Creando material con archivo:', file.name, 'para actividad:', actividadId);
+
+    const formData = new FormData();
+    formData.append('archivo', file);  // El backend espera 'archivo'
+    formData.append('id_actividad', actividadId.toString());
+
+    const response = await axiosTeacher.post('/materiales', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
 
     if (!response.data.success) {
       throw new Error(response.data.message || 'Error al crear material');
     }
 
+    console.log('✅ Material creado exitosamente');
     return response.data.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('Error al crear material:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al crear el material');
+    throw new Error(err.response?.data?.message || err.message || 'Error al crear el material');
   }
 };
 
@@ -73,9 +87,10 @@ export const updateMaterial = async (materialId: number, payload: UpdateMaterial
     }
 
     return response.data.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('Error al actualizar material:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al actualizar el material');
+    throw new Error(err.response?.data?.message || err.message || 'Error al actualizar el material');
   }
 };
 
@@ -87,9 +102,10 @@ export const deleteMaterial = async (materialId: number): Promise<boolean> => {
     const response = await axiosTeacher.delete(`/materiales/${materialId}`);
 
     return response.data.success;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('Error al eliminar material:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al eliminar el material');
+    throw new Error(err.response?.data?.message || err.message || 'Error al eliminar el material');
   }
 };
 
@@ -102,7 +118,7 @@ export const uploadFile = async (file: File): Promise<string> => {
 
     // Crear FormData para enviar el archivo
     const formData = new FormData();
-    formData.append('file', file);
+    formData.append('archivo', file);  // El backend espera 'archivo', no 'file'
 
     // Subir archivo al backend
     const response = await axiosTeacher.post('/materiales/upload', formData, {
@@ -117,8 +133,9 @@ export const uploadFile = async (file: File): Promise<string> => {
 
     console.log('✅ Archivo subido exitosamente:', response.data.data.url);
     return response.data.data.url;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('❌ Error al subir archivo:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al subir el archivo');
+    throw new Error(err.response?.data?.message || err.message || 'Error al subir el archivo');
   }
 };

@@ -89,7 +89,7 @@ export default function NewUnitModal({
 
       // Cerrar modal
       onClose();
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('❌ Error al crear unidad:', err);
       // El error ya se maneja en el hook, aquí solo logueamos
     }

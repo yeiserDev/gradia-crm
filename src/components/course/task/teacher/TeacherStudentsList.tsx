@@ -1,23 +1,25 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { ArrowRight2, TickCircle, CloseCircle, SearchNormal1, NoteRemove, Award } from 'iconsax-react';
+import { SearchNormal1 } from 'iconsax-react';
 
 // --- 1. IMPORTACIONES CORREGIDAS ---
 import type { Submission } from '@/lib/types/core/submission.model';
 import { useTaskSubmissionsList } from '@/hooks/core/useTaskSubmissionsList';
 import { useSaveGrade } from '@/hooks/core/useSaveGrade';
-// (Se eliminan los mocks 'listForTeacher', 'upsertGrade', etc.)
 
 import StudentSubmissionModal from './StudentSubmissionModal';
+import TeacherAIGradeModal from './TeacherAIGradeModal';
+import StudentRow from './StudentRow';
 
 export default function TeacherStudentsList({ taskId, courseId }: { taskId: string; courseId: string }) {
 
   // --- 2. HOOKS ACTUALIZADOS ---
-  const { data, isLoading: loading } = useTaskSubmissionsList(taskId);
+  const { data, isLoading: loading, refetch } = useTaskSubmissionsList(taskId);
   const { saveGrade, isLoading: isSaving } = useSaveGrade(taskId);
 
   const [openId, setOpenId] = useState<string | null>(null);
+  const [openAIGradeId, setOpenAIGradeId] = useState<string | null>(null);
   const [query, setQuery] = useState('');
 
   // (El 'useEffect' para cargar se elimina, useQuery lo maneja)
@@ -63,42 +65,17 @@ export default function TeacherStudentsList({ taskId, courseId }: { taskId: stri
       ) : (
         <ul className="divide-y divide-[var(--border)]">
           {filtered.map((s, i) => (
-            <li key={s.id} className="px-5 py-3 flex items-center gap-3">
-              <div className="w-7 text-[12px] text-[color:var(--muted)]">{String(i + 1).padStart(2, '0')}</div>
-
-              {/* Avatar (ahora usa 'avatarUrl' o el fallback) */}
-              <img
-                src={s.avatarUrl ?? `https://api.dicebear.com/9.x/thumbs/svg?seed=${encodeURIComponent(s.studentName)}&backgroundColor=b6e3f4,c0aede,d1d4f9`}
-                alt={s.studentName}
-                className="h-8 w-8 rounded-full"
-              />
-
-              <div className="min-w-0 flex-1">
-                <div className="truncate font-medium text-[14px]">{s.studentName}</div>
-                {s.submittedAt && (
-                  <div className="text-[12px] text-[color:var(--muted)]">
-                    {new Date(s.submittedAt).toLocaleString('es-PE')}
-                  </div>
-                )}
-              </div>
-
-              <div className="flex items-center gap-3">
-                {/* 5. USA EL 'StatusChip' ACTUALIZADO */}
-                <StatusChip status={s.status} />
-
-                <span className="inline-grid place-items-center h-8 min-w-[80px] px-2 rounded-xl border border-[var(--border)] bg-[var(--section)] text-[13px] font-medium">
-                  {s.grade == null ? 'Sin nota' : `${s.grade}/20`}
-                </span>
-
-                <button
-                  onClick={() => setOpenId(s.id)}
-                  className="h-9 w-9 grid place-items-center rounded-xl border border-[var(--border)] hover:bg-[var(--section)]"
-                  title="Revisar y calificar"
-                >
-                  <ArrowRight2 size={18} color="var(--icon)" />
-                </button>
-              </div>
-            </li>
+            <StudentRow
+              key={s.id}
+              submission={s}
+              index={i}
+              onOpenAIGrade={() => setOpenAIGradeId(s.id)}
+              onOpenManualGrade={() => setOpenId(s.id)}
+              onRequestRefresh={() => {
+                // Evitamos rechazos silenciosos si se llama varias veces
+                void refetch();
+              }}
+            />
           ))}
         </ul>
       )}
@@ -115,33 +92,14 @@ export default function TeacherStudentsList({ taskId, courseId }: { taskId: stri
           }}
         />
       )}
+
+      {/* --- 7. MODAL DE EVALUACIÓN DE IA PARA DOCENTE --- */}
+      {openAIGradeId && (
+        <TeacherAIGradeModal
+          submission={items.find((x) => x.id === openAIGradeId)!}
+          onClose={() => setOpenAIGradeId(null)}
+        />
+      )}
     </section>
   );
-}
-
-// --- 7. 'StatusChip' ACTUALIZADO ---
-// Ahora acepta los tipos de status de nuestra API
-function StatusChip({ status }: { status: Submission['status'] }) {
-  if (status === 'SUBMITTED') {
-    return (
-      <span className="inline-flex items-center gap-1 h-8 px-2 rounded-xl text-[13px] font-medium text-white bg-[color:var(--accent-green)]">
-        <TickCircle size={16} color="#ffffff" /> Entregado
-      </span>
-    );
-  }
-  if (status === 'NOT_SUBMITTED') {
-    return (
-      <span className="inline-flex items-center gap-1 h-8 px-2 rounded-xl text-[13px] font-medium text-white bg-[color:var(--accent-red)]">
-        <CloseCircle size={16} color="#ffffff" /> No entregó
-      </span>
-    );
-  }
-  if (status === 'GRADED') {
-    return (
-      <span className="inline-flex items-center gap-1 h-8 px-2 rounded-xl text-[13px] font-medium text-[color:var(--fg)] bg-[var(--section)] border border-[var(--border)]">
-        <Award size={16} color="currentColor" /> Calificado
-      </span>
-    );
-  }
-  return null; // Por si acaso
 }

@@ -26,8 +26,8 @@ export const useCourseDetails = (courseId: string, userRoles?: string[]) => {
     try {
       const courseData = await getCourseById(courseId, userRoles);
       setCourse(courseData);
-    } catch (err: any) {
-      const errorMessage = err.message || 'Error al cargar el curso';
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al cargar el curso';
       setError(errorMessage);
       console.error('Error en useCourseDetails:', err);
     } finally {

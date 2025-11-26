@@ -39,19 +39,20 @@ export const createUnit = async (data: CreateUnitPayload): Promise<UnitResponse>
     }
 
     return response.data.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { status?: number; data?: { message?: string } } };
     console.error('Error al crear unidad:', error);
 
     // Manejo de errores específicos del backend
-    if (error.response?.status === 403) {
+    if (err.response?.status === 403) {
       throw new Error('No tienes permiso para crear unidades en este curso');
     }
 
-    if (error.response?.status === 400) {
-      throw new Error(error.response.data.message || 'Datos inválidos para crear la unidad');
+    if (err.response?.status === 400) {
+      throw new Error(err.response.data?.message || 'Datos inválidos para crear la unidad');
     }
 
-    throw new Error(error.response?.data?.message || 'Error al crear unidad');
+    throw new Error(err.response?.data?.message || 'Error al crear unidad');
   }
 };
 
@@ -70,9 +71,10 @@ export const getUnitsByCourse = async (cursoId: string): Promise<UnitResponse[]>
     }
 
     return response.data.data || [];
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
     console.error('Error al obtener unidades:', error);
-    throw new Error(error.response?.data?.message || 'Error al cargar unidades');
+    throw new Error(err.response?.data?.message || 'Error al cargar unidades');
   }
 };
 
@@ -95,9 +97,10 @@ export const updateUnit = async (
     }
 
     return response.data.data;
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } } };
     console.error('Error al actualizar unidad:', error);
-    throw new Error(error.response?.data?.message || 'Error al actualizar unidad');
+    throw new Error(err.response?.data?.message || 'Error al actualizar unidad');
   }
 };
 
@@ -113,13 +116,14 @@ export const deleteUnit = async (unitId: string): Promise<void> => {
     if (!response.data.success) {
       throw new Error(response.data.message || 'Error al eliminar unidad');
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { status?: number; data?: { message?: string } } };
     console.error('Error al eliminar unidad:', error);
 
-    if (error.response?.status === 400) {
+    if (err.response?.status === 400) {
       throw new Error('No se puede eliminar una unidad con actividades asociadas');
     }
 
-    throw new Error(error.response?.data?.message || 'Error al eliminar unidad');
+    throw new Error(err.response?.data?.message || 'Error al eliminar unidad');
   }
 };

@@ -14,7 +14,17 @@ export const useTaskComments = (taskId: string, role: Role) => {
   const axiosInstance = role === 'DOCENTE' ? axiosTeacher : axiosStudent;
 
   // Función para aplanar la estructura anidada del backend
-  const flattenComments = useCallback((backendComments: any[]): TaskComment[] => {
+  const flattenComments = useCallback((backendComments: Array<{
+    id_comentario: number;
+    contenido: string;
+    created_at: string;
+    parent_id: number | null;
+    usuario?: {
+      correo_institucional?: string;
+      persona?: { nombre: string; apellido: string };
+    };
+    respuestas?: unknown[];
+  }>): TaskComment[] => {
     let flatList: TaskComment[] = [];
 
     backendComments.forEach((c) => {

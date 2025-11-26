@@ -22,8 +22,8 @@ export const useSaveUnit = () => {
       const newUnit = await createUnit(data);
       setIsLoading(false);
       return newUnit;
-    } catch (err: any) {
-      const errorMessage = err.message || 'Error al crear la unidad';
+    } catch (err: unknown) {
+      const errorMessage = err instanceof Error ? err.message : 'Error al crear la unidad';
       setError(errorMessage);
       setIsLoading(false);
       return null;

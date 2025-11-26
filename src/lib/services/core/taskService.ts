@@ -98,8 +98,9 @@ export const saveTask = async (taskId: string, data: SaveTaskPayload, userId: nu
         unitId: actividadActualizada.id_unidad?.toString()
       };
     }
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { message?: string } }; message?: string };
     console.error('Error al guardar tarea:', error);
-    throw new Error(error.response?.data?.message || error.message || 'Error al guardar la actividad');
+    throw new Error(err.response?.data?.message || err.message || 'Error al guardar la actividad');
   }
 };
