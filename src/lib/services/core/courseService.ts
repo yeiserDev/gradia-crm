@@ -96,8 +96,8 @@ export const getCourseById = async (
           tasks: (unidad.actividades || [])
             .map((actividad: ActividadBackend) => ({
               id: actividad.id_actividad.toString(),
-              title: actividad.titulo_actividad || actividad.nombre_actividad,
-              dueAt: actividad.fecha_vencimiento || actividad.fecha_limite
+              title: actividad.titulo_actividad || actividad.nombre_actividad || 'Sin título',
+              dueAt: actividad.fecha_vencimiento || actividad.fecha_limite || undefined
             }))
         })),
       docente: {

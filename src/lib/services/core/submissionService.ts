@@ -87,7 +87,7 @@ export const getSubmissionsList = async (taskId: string): Promise<Submission[]> 
     // Deduplicar por studentId - usar estrategia de prioridad
     const deduplicationMap = new Map<string, Submission>();
 
-    mappedSubmissions.forEach((submission) => {
+    mappedSubmissions.forEach((submission: Submission) => {
       const existing = deduplicationMap.get(submission.studentId);
 
       if (!existing) {
@@ -164,7 +164,7 @@ export const saveGrade = async (
       grade: entrega.calificacion ?? null,
       feedback: entrega.retroalimentacion ?? null,
       status: entrega.calificacion !== null && entrega.calificacion !== undefined ? 'GRADED' : 'SUBMITTED',
-      avatarUrl: null,
+      avatarUrl: undefined,
       attachments: entrega.archivos?.map((archivo: { id_archivo_entrega?: number; tipo_archivo?: string; nombre_archivo?: string; url_archivo?: string }) => ({
         id: archivo.id_archivo_entrega?.toString() || '0',
         type: archivo.tipo_archivo || 'unknown',

@@ -13,8 +13,8 @@ export const useTaskComments = (taskId: string, role: Role) => {
   // Seleccionar la instancia de axios correcta según el rol
   const axiosInstance = role === 'DOCENTE' ? axiosTeacher : axiosStudent;
 
-  // Función para aplanar la estructura anidada del backend
-  const flattenComments = useCallback((backendComments: Array<{
+  // Tipo recursivo para comentarios
+  type BackendComment = {
     id_comentario: number;
     contenido: string;
     created_at: string;
@@ -23,8 +23,11 @@ export const useTaskComments = (taskId: string, role: Role) => {
       correo_institucional?: string;
       persona?: { nombre: string; apellido: string };
     };
-    respuestas?: unknown[];
-  }>): TaskComment[] => {
+    respuestas?: BackendComment[];
+  };
+
+  // Función para aplanar la estructura anidada del backend
+  const flattenComments = useCallback((backendComments: BackendComment[]): TaskComment[] => {
     let flatList: TaskComment[] = [];
 
     backendComments.forEach((c) => {

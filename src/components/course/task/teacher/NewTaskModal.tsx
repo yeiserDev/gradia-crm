@@ -7,8 +7,7 @@ import { CloseCircle, TickCircle, DocumentDownload, Trash } from 'iconsax-react'
 import { useTaskDetails } from '@/hooks/core/useTaskDetails';
 import { useSaveTask } from '@/hooks/core/useSaveTask';
 import type { SaveTaskPayload } from '@/lib/services/core/taskService';
-import { createMaterial, uploadFile } from '@/lib/services/core/materialService';
-import type { MaterialType } from '@/lib/types/core/material.model';
+import { createMaterial } from '@/lib/services/core/materialService';
 
 type UnitItem = {
   id: string;
@@ -122,26 +121,8 @@ export default function NewTaskModal({
         console.log('📤 Subiendo materiales de apoyo...');
         for (const file of docs) {
           try {
-            // Subir archivo y obtener URL
-            const url = await uploadFile(file);
-
-            // Detectar tipo de archivo
-            const extension = file.name.split('.').pop()?.toLowerCase() || 'otro';
-            let tipoDocumento: MaterialType = 'otro';
-
-            if (extension === 'pdf') tipoDocumento = 'pdf';
-            else if (['mp4', 'avi', 'mov', 'webm'].includes(extension)) tipoDocumento = 'video';
-            else if (['ppt', 'pptx'].includes(extension)) tipoDocumento = 'ppt';
-            else if (['doc', 'docx'].includes(extension)) tipoDocumento = 'doc';
-
-            // Crear material en el backend
-            await createMaterial({
-              id_actividad: actividadId,
-              nombre_documento: file.name,
-              tipo_documento: tipoDocumento,
-              url_archivo: url,
-            });
-
+            // Crear material en el backend (incluye upload del archivo)
+            await createMaterial(actividadId, file);
             console.log('✅ Material subido:', file.name);
           } catch (err) {
             console.error('❌ Error al subir material:', file.name, err);
@@ -153,13 +134,7 @@ export default function NewTaskModal({
       if (rubric) {
         console.log('📤 Subiendo rúbrica...');
         try {
-          const url = await uploadFile(rubric);
-          await createMaterial({
-            id_actividad: actividadId,
-            nombre_documento: rubric.name,
-            tipo_documento: 'pdf',
-            url_archivo: url,
-          });
+          await createMaterial(actividadId, rubric);
           console.log('✅ Rúbrica subida:', rubric.name);
         } catch (err) {
           console.error('❌ Error al subir rúbrica:', err);

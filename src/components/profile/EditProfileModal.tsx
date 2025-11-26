@@ -2,7 +2,7 @@
 
 import { User, Sms, CallCalling } from 'iconsax-react';
 
-export default function EditProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onClose: () => void; user: { name: string; email: string; phone?: string } }) {
+export default function EditProfileModal({ isOpen, onClose, user }: { isOpen: boolean; onClose: () => void; user: { name: string; email?: string | null; phone?: string | null; bio?: string | null } }) {
   if (!isOpen) return null;
 
   return (

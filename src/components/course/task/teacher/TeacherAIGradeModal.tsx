@@ -58,12 +58,17 @@ export default function TeacherAIGradeModal({
     ai: aiData,
   });
 
+  // Convertir grade a number si es string
+  const numericGrade = typeof submission.grade === 'string'
+    ? parseFloat(submission.grade)
+    : submission.grade;
+
   return (
     <GradeDetailModal
       isOpen={true}
       onClose={onClose}
-      grade={aiFeedback?.nota_final ?? submission.grade}
-      manualGrade={submission.grade ?? undefined}
+      grade={aiFeedback?.nota_final ?? numericGrade}
+      manualGrade={numericGrade ?? undefined}
       manualFeedback={submission.feedback ?? undefined}
       hasVideo={hasVideo}
       rubric={[]} // Sin rúbrica manual para docentes

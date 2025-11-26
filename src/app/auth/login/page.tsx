@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { motion } from 'framer-motion';
@@ -9,6 +9,8 @@ import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
 import GoogleIcon from '@/components/auth/GoogleIcon';
+import LoginLoader from '@/components/auth/LoginLoader';
+import GoogleLoader from '@/components/auth/GoogleLoader';
 import { useLogin } from '@/hooks/auth/useLogin';
 import { LoginCredentials } from '@/lib/types/auth/login.model';
 import { useGoogleLogin } from '@/hooks/auth/useGoogleLogin';
@@ -23,6 +25,11 @@ export default function LoginPage() {
   const { loginWithGoogle, isLoading: isGoogleLoading } = useGoogleLogin();
   const [show, setShow] = useState(false);
 
+  // Debug: ver cuándo cambia isLoading
+  useEffect(() => {
+    console.log('🔄 isLoading cambió a:', isLoading);
+  }, [isLoading]);
+
   const {
     register,
     handleSubmit,
@@ -32,6 +39,7 @@ export default function LoginPage() {
   });
 
   function onSubmit(values: LoginCredentials) {
+    console.log('🔐 Iniciando login...', { isLoading });
     login(values);
   }
 
@@ -177,11 +185,11 @@ export default function LoginPage() {
             disabled={isLoading || isGoogleLoading}
             className="w-full rounded-full py-3.5 text-lg font-light text-white
               bg-gradient-to-r from-[#30E3CA] to-[#7DE69D]
-              hover:from-[#25d6bb] hover:to-[#6ed88a] 
-              disabled:opacity-60 shadow-lg shadow-[#30E3CA]/30 
+              hover:from-[#25d6bb] hover:to-[#6ed88a]
+              disabled:opacity-60 shadow-lg shadow-[#30E3CA]/30
               transition-all duration-300"
           >
-            {isLoading ? 'Ingresando…' : 'Iniciar sesión'}
+            {isLoading ? <LoginLoader /> : 'Iniciar sesión'}
           </motion.button>
 
           {/* Separador */}
@@ -201,12 +209,18 @@ export default function LoginPage() {
             type="button"
             onClick={() => loginWithGoogle()}
             disabled={isGoogleLoading || isLoading}
-            className="w-full flex items-center justify-center gap-3 rounded-full 
-              border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--section)] 
+            className="w-full flex items-center justify-center gap-3 rounded-full
+              border border-[var(--border)] bg-[var(--card)] hover:bg-[var(--section)]
               py-3.5 text-lg font-medium text-[var(--fg)] transition-colors shadow-sm"
           >
-            <GoogleIcon className="w-6 h-6" />
-            {isGoogleLoading ? 'Redirigiendo...' : 'Continuar con Google'}
+            {isGoogleLoading ? (
+              <GoogleLoader />
+            ) : (
+              <>
+                <GoogleIcon className="w-6 h-6" />
+                Continuar con Google
+              </>
+            )}
           </button>
         </form>
 

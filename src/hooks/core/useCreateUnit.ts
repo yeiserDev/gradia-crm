@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createUnit, CreateUnitPayload } from '@/lib/services/core/unitService';
+import { createUnit, CreateUnitPayload, UnitResponse } from '@/lib/services/core/unitService';
 import { COURSES_QUERY_KEY } from './useCourses';
 
 /**
@@ -14,7 +14,7 @@ export const useCreateUnit = () => {
     mutateAsync,
     isPending: isLoading,
     error,
-  } = useMutation({
+  } = useMutation<UnitResponse, Error, CreateUnitPayload>({
     mutationFn: (data: CreateUnitPayload) => createUnit(data),
 
     onSuccess: (createdUnit) => {
@@ -27,7 +27,7 @@ export const useCreateUnit = () => {
       // queryClient.invalidateQueries({ queryKey: ['course', createdUnit.id_curso] });
     },
 
-    onError: (err: unknown) => {
+    onError: (err: Error) => {
       console.error('❌ Error al crear unidad:', err);
     },
   });
